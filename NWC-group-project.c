@@ -58,6 +58,7 @@ char tempID_hold[max_length] = {0};
 //set to 0 to see function outputs
 // set to 1 to not see function outputs
 int debug = 0;
+int debug_scanfpassword = 0;
 
 //Initializing file name/s
 char *loginfile = "login_database.txt";
@@ -190,7 +191,7 @@ int main()
         //Appening title to Database 
         //( functions later in program dosent work if there isnt something in the .txt filw)
         fp = fopen(loginfile, "a");
-        const char *text = "LOGIN DATABASE\n\nUserID: 10101010\nUser Email: admin@gmail.com\nUser Password: BB33D8B\n;\n\n";
+        const char *text = "LOGIN DATABASE\n\nUserID: 10101010\nUser Email: admin@gmail.com\nHashed Password: BB33D8B\n;\n\n";
         fputs(text, fp);
             
         printf(" starter data inserted-");        
@@ -371,15 +372,22 @@ int main()
         scanf(" %s", user.email);
         
         printf(underline_start"\nEnter your password:\n"underline_end);
-        //DEBUG
-        //scanf("%s", user.password);
-
-        //Gets password from user while masking input
-        scanfpassword(user.password);
+        
+        if(debug_scanfpassword==0)
+        {
+            //DEBUG
+            scanf("%s", user.password);
+        }
+        else if(debug == 1)
+        {
+            //Gets password from user while masking input
+            scanfpassword(user.password);            
+        }
+            
          
         //Verification check for password and email
         int login_access = user_login(user.email,user.password,tempID_hold);
-
+        
         while (login_access != 0 && login_access != 2 && attempt < total_attempts)
         {
             //system(clear_terminal); //Clears command line UI
@@ -504,7 +512,7 @@ int addcustomer (char *filename,char *filename2, char *customerID, char *user_fi
         fputs(user_email, fp);
         fputs("\n", fp);
                 
-        fputs("User Password: ", fp);
+        fputs("Hashed Password: ", fp);
         
         //Hashing password & storing said hash in password variable
         hash_djb2(user_password,hashed_password);
@@ -593,7 +601,7 @@ int user_login (char *email, char *password, char* tempID)
                     //Sanitizing values ( removing new line values, carriages, white space and other unwanted characters)
                     tmpID_hold[strcspn(tmpID_hold, "\r\n")] = '\0';
                     printf("\n\nFound: %s",tmpID_hold);
-                    printf("\nuserID pointer location: %d\n", position1);
+                    printf("\nuserID pointer location: %ld\n", position1);
                 }
             }
             
@@ -601,28 +609,28 @@ int user_login (char *email, char *password, char* tempID)
             {
                 //Assigns email found at if statement to found_email
                 char *found_email = strstr(str, email);
-
+                
                 if (debug == 0)
                 {
                     printf("\ndebug - found email: %s",found_email);
                     a = strlen(found_email);
                     printf("strlen: %d", a);
                 }
-
+                
                 if (found_email != NULL)
                 {
                     strcpy(temp_email, found_email);
-     
+                    
                     if (debug == 0)
                     {
                         printf("\ndebug - temp email: %s",temp_email);
                         a = strlen(temp_email);
                         printf("strlen: %d", a);
                     }
-
+                    
                     //Sanitizing values ( removing new line values, carriages and white space)
                     temp_email[strcspn(temp_email, "\r\n")] = '\0';
-
+                    
                     if (debug == 0)
                     {
                         printf("\ndebug - temp email after sanitization: %s\n",temp_email);
@@ -659,7 +667,14 @@ int user_login (char *email, char *password, char* tempID)
                     {
                         printf("\nlogin function email(from file): %s",temp_email);
                         printf("\nlogin function email(from user): %s",email);
-                        printf("\nlogin function pswd(from file): %s",temp_password);
+                        if(temp_password != NULL)
+                        {
+                            printf("\nlogin function pswd(from file): %s",temp_password);
+                        }
+                        else
+                        {
+                            printf("\nlogin function pswd(from file): NO MATCH");
+                        }
                         printf("\nlogin function pswd(from user): %s",hashed_password);
 
                         if(strcmp(temp_email,admin_email)==0)
@@ -698,23 +713,23 @@ int user_login (char *email, char *password, char* tempID)
                     }
                 
                 }
+                
+                if(strcmp(temp_email,admin_email) == 0 && strcmp(temp_password,hashed_password) == 0)
+                {
+                    login_validation = 2; //Successful admin login
+                    position2 = ftell(fp);
+                }
+                else if(strcmp(temp_email,email) == 0 && strcmp(temp_password,hashed_password) == 0)
+                {
+                    login_validation = 0; //Successful login
+                    position2 = ftell(fp);
+                }
             }
         }
     }
     else
     {
         printf("\n-Could not access login database-\n");
-    }
-
-    if(strcmp(temp_email,admin_email) == 0 && strcmp(temp_password,hashed_password) == 0)
-    {
-        login_validation = 2; //Successful admin login
-        position2 = ftell(fp);
-    }
-    else if(strcmp(temp_email,email) == 0 && strcmp(temp_password,hashed_password) == 0)
-    {
-        login_validation = 0; //Successful login
-        position2 = ftell(fp);
     }
 
     /**Given the login was successful, goes back to place in file
@@ -755,8 +770,7 @@ int user_login (char *email, char *password, char* tempID)
     return login_validation;
 }
 
-/** 
-//Definition of function 5.
+//**Definition of function 5.
 int getch()
 {
     int ch;
@@ -777,7 +791,7 @@ int getch()
     // reset back to default settings
     tcsetattr(STDIN_FILENO, TCSANOW, &old_settings);
     return ch;   
-}*/
+}**//
 
 //Definition of function 6.
 int generateID ()
