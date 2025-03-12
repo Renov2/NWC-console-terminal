@@ -1,14 +1,12 @@
 /******************************************************************************
-
+<Author Name>
 Created Febraury 23, 2025
-
-AUDIT FUNCTION FOR LOGIN DOSENT GET THE RIGHT ID
 
 NWC Complete MAIN UI
 - Account Registration
 - Account Login
 
-//DEFAULT ADMIN LOGIN
+//HARD CODED ADMIN LOGIN
 Password "00000000"
 Email "admin@gmail.com"
 
@@ -19,8 +17,9 @@ Email "admin@gmail.com"
 #include <unistd.h>
 #include <time.h>
 #include <wchar.h>
-#include <conio.h>
 #include <math.h>
+#include <conio.h>
+#include <ctype.h>
 //#include <termios.h>
 
 
@@ -55,10 +54,10 @@ char clear_terminal[5 +1];
 char hashed_password[50];
 char tempID_hold[max_length] = {0};
 
-//set to 0 to see function outputs
+// set to 0 to see function outputs
 // set to 1 to not see function outputs
-int debug = 0;
-int debug_scanfpassword = 0;
+int debug = 1;
+int debug_scanfpassword = 1;
 
 //Initializing file name/s
 char *loginfile = "login_database.txt";
@@ -108,7 +107,7 @@ given with an "*" **/
 void scanfpassword (char* string_input);
 
 /**8. Function that sets all characters in an array to lowercase**/
-void setall_lowercase (char* email);
+void setall_lowercase (char* string);
 
 /**9. Function that takes a string as input and uses a modified DJB2
 hashing algorithm**/
@@ -189,7 +188,7 @@ int main()
         fclose(fp);
             
         //Appening title to Database 
-        //( functions later in program dosent work if there isnt something in the .txt filw)
+        //( functions later in program dosent work if there isnt something in the .txt file )
         fp = fopen(loginfile, "a");
         const char *text = "LOGIN DATABASE\n\nUserID: 10101010\nUser Email: admin@gmail.com\nHashed Password: BB33D8B\n;\n\n";
         fputs(text, fp);
@@ -282,11 +281,23 @@ int main()
         
         printf(underline_start"Enter an email:\n"underline_end);
         scanf("%s", user.email);
+        setall_lowercase(user.email);
         
+        //Validating email format by checking if the 3 most popular email domain names are included
+        while(strstr(user.email,"@gmail.com") == NULL &&
+              strstr(user.email,"@yahoo.com") == NULL &&
+              strstr(user.email,"@hotmail.com") == NULL) //@<domain_name>.com was not found do:
+        {
+            printf("\n-Incorrect email format-\n\nAccepted domains:\n- @gmail.com\n- @yahoo.com\n- @hotmail.com\n\n");
+            printf(underline_start"Enter an email:\n"underline_end);
+            scanf("%s", user.email);
+            setall_lowercase(user.email);
+        }
+
         /**Checks if the email entered is already being used and
         asks the user to enter a new one if so**/
         //On confirmation that email is available, user is prompted to enter password and their names.
-        if(duplicate_check(user.email,loginfile) != 0) //Attempts to access files
+        if(duplicate_check(user.email,loginfile) != 0)
         {
             
             while(duplicate_check(user.email,loginfile) != 2)
@@ -294,6 +305,7 @@ int main()
                 printf("\n-Email already in use!-\n\n");
                 printf(underline_start"Enter new email:\n"underline_end);
                 scanf("%s", user.email);
+                setall_lowercase(user.email);
             }
             
 
@@ -370,15 +382,16 @@ int main()
         
         printf(underline_start"Enter your email:\n"underline_end);
         scanf(" %s", user.email);
+        setall_lowercase(user.email);
         
         printf(underline_start"\nEnter your password:\n"underline_end);
         
-        if(debug_scanfpassword==0)
+        if(debug_scanfpassword != 1)
         {
             //DEBUG
-            scanf("%s", user.password);
+            scanf(" %s", user.password);
         }
-        else if(debug == 1)
+        else
         {
             //Gets password from user while masking input
             scanfpassword(user.password);            
@@ -390,7 +403,7 @@ int main()
         
         while (login_access != 0 && login_access != 2 && attempt < total_attempts)
         {
-            //system(clear_terminal); //Clears command line UI
+            system(clear_terminal); //Clears command line UI
             printf(bold_start "\n---ACCOUNT LOGIN---\n" bold_end);
             
             printf("\n-Email or Password is incorrect - ");
@@ -398,15 +411,21 @@ int main()
             
             printf(underline_start"\nEnter your email:\n"underline_end);
             scanf(" %s", user.email);
+            setall_lowercase(user.email);
             
             printf(underline_start"\nEnter your password:\n"underline_end);
 
-            //DEBUG
-            //scanf("%s", user.password);
-
-            //Gets password from user while masking input
-            scanfpassword(user.password);
-            
+            if(debug_scanfpassword != 1)
+            {
+                //DEBUG
+                scanf(" %s", user.password);
+            }
+            else
+            {
+                //Gets password from user while masking input
+                scanfpassword(user.password);            
+            }
+                
             //Checking credentials over
             login_access = user_login(user.email,user.password,tempID_hold);
 
@@ -416,13 +435,13 @@ int main()
         //Check this variable when determining if the user should be given access to the program beyond this point
         if(login_access == 0)
         {
-            printf("\n\nlogin successful");
+            printf("\n\nlogin successful\n\n");
             auditlogin(login_access,tempID_hold);
 
         }
         else if (login_access == 2)
         {
-            printf("\n\nlogin successful - ADMIN USER -");
+            printf("\n\nlogin successful - ADMIN USER -\n\n");
             auditlogin(login_access,tempID_hold);
         }
     }
@@ -584,22 +603,22 @@ int user_login (char *email, char *password, char* tempID)
     int login_validation = 1, a;
     int debug_a;
     long int position1;
-    long int position2;
 
     if (fp != NULL)
     {
         while(fgets(str,max_e_length,fp) != NULL)
+        
         {
             if(strstr(str,"UserID: ") != NULL && login_validation == 1)//An id prefix FOUND
             {
-                position1 = ftell(fp); // Saves where ID was found +1 line
+                position1 = ftell(fp); // Saves where ID was found as character index
                 
+                strcpy(tmpID_hold,str);
+                //Sanitizing values ( removing new line values, carriages, white space and other unwanted characters)
+                tmpID_hold[strcspn(tmpID_hold, "\r\n")] = '\0';
+
                 if(debug == 0)
                 {
-                    strcpy(tmpID_hold,str);
-
-                    //Sanitizing values ( removing new line values, carriages, white space and other unwanted characters)
-                    tmpID_hold[strcspn(tmpID_hold, "\r\n")] = '\0';
                     printf("\n\nFound: %s",tmpID_hold);
                     printf("\nuserID pointer location: %ld\n", position1);
                 }
@@ -654,20 +673,13 @@ int user_login (char *email, char *password, char* tempID)
 
                         }
                     }
-                    else
-                    {
-                        if(debug = 0)
-                        {
-                            printf("\ndebug info - error user password no match\n");
-                        }
-                    }
 
                     /*DEBUGGING*/
                     if (debug == 0)
                     {
                         printf("\nlogin function email(from file): %s",temp_email);
                         printf("\nlogin function email(from user): %s",email);
-                        if(temp_password != NULL)
+                        if(strlen(temp_password)!=0)
                         {
                             printf("\nlogin function pswd(from file): %s",temp_password);
                         }
@@ -686,7 +698,6 @@ int user_login (char *email, char *password, char* tempID)
                             debug_a = 1;
                         }
                         printf("\n\nstrcmp admin email: %d",debug_a);
-                        debug_a = 1;
                         
                         if(strcmp(temp_email,email)==0)
                         {
@@ -697,7 +708,6 @@ int user_login (char *email, char *password, char* tempID)
                             debug_a = 1;
                         }
                         printf("\nstrcmp email: %d",debug_a);
-                        debug_a = 1;
                         
                         if(strcmp(temp_password,hashed_password)==0)
                         {
@@ -707,7 +717,6 @@ int user_login (char *email, char *password, char* tempID)
                         {
                             debug_a = 1;
                         }
-                        
                         printf("\nstrcmp password: %d",debug_a);
 
                     }
@@ -717,12 +726,10 @@ int user_login (char *email, char *password, char* tempID)
                 if(strcmp(temp_email,admin_email) == 0 && strcmp(temp_password,hashed_password) == 0)
                 {
                     login_validation = 2; //Successful admin login
-                    position2 = ftell(fp);
                 }
                 else if(strcmp(temp_email,email) == 0 && strcmp(temp_password,hashed_password) == 0)
                 {
                     login_validation = 0; //Successful login
-                    position2 = ftell(fp);
                 }
             }
         }
@@ -737,18 +744,19 @@ int user_login (char *email, char *password, char* tempID)
     **/
     if(login_validation == 0 || login_validation == 2)
     {
-        if(fseek(fp,position1,SEEK_CUR)==0)
+        if(fseek(fp,position1,SEEK_CUR)==0)//Brings file pointer 1 line before UserID associated with user credentials
+                                           //if statement only continues if fseek was successful in moving pointer (returned 0)
         {
-            if(fgets(str,max_e_length,fp) != NULL)
+            if(fgets(str,max_e_length,fp) != NULL)//Goes down by one line and stores string found in "str"
             {
                 strcpy(tmpID_hold,str);
             }
 
-            //Sanitizing values ( removing new line values, carriages, white space and other unwanted characters)
+            //Sanitizing string ( removing new line values(\n), carriages(\r), white space(" ") and other unwanted characters)
             if(strlen(tmpID_hold)>8)
             {
                 char *b = tmpID_hold;
-                b += strlen("UserID: ");
+                b += strlen("UserID: "); // Removes all characters before actual ID string
                 strcpy(tmpID_hold,b);
                 tmpID_hold[strcspn(tmpID_hold, "\r\n")] = '\0';
             }
@@ -760,7 +768,7 @@ int user_login (char *email, char *password, char* tempID)
                 printf("\n\nID passed through: %s\n",tempID);
             }
         }
-        else if(debug == 0)
+        else if(fseek(fp,position1,SEEK_CUR) !=0 && debug == 0)
         {
             printf("\nfseek aint working\n");
         }
@@ -770,7 +778,7 @@ int user_login (char *email, char *password, char* tempID)
     return login_validation;
 }
 
-//**Definition of function 5.
+/**Definition of function 5.
 int getch()
 {
     int ch;
@@ -791,7 +799,7 @@ int getch()
     // reset back to default settings
     tcsetattr(STDIN_FILENO, TCSANOW, &old_settings);
     return ch;   
-}**//
+}**/
 
 //Definition of function 6.
 int generateID ()
@@ -853,12 +861,20 @@ void scanfpassword (char* string_input)
 }
 
 //Defintion of function 8.
-void setall_lowercase (char* email)
+void setall_lowercase (char* string)
 {
-    for(int i = 0; i<strlen(email); i++)
+    char temp_string[max_e_length] = {0};
+    int i;
+
+    strcpy(temp_string, string);
+
+    for(i = 0; i<strlen(temp_string); i++)
     {
-        //tolower(email[i]);
+        temp_string[i] = tolower(temp_string[i]);
     }
+    temp_string[i] = '\0';
+
+    strcpy(string, temp_string);
 }
 
 //Defintion of function 9.
