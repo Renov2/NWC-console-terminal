@@ -2,6 +2,13 @@
 <Author Name>
 Created Febraury 23, 2025
 
+//CHANGE HARD CODED ADMIN HAS BACK TO BB....etc 
+"00000000" in text
+
+//CHANGE getch back to _getwch
+
+//Change debug scanfpassword
+
 NWC Complete MAIN UI
 - Account Registration
 - Account Login
@@ -34,8 +41,8 @@ Email "admin@gmail.com"
 #define starter_text "LOGIN DATABASE"
 #define file_open_error "-Error opening file-"
 #define data_breakpoint ";"
-#define max_ID 99999999
-#define min_ID 10000000
+#define max_ID 9999999
+#define min_ID 1000000
 
 //Keyboard ASCII map
 #define backspace_key 8
@@ -55,8 +62,8 @@ int delay_time = 3;
 
 // set to 0 to see function outputs
 // set to 1 to not see function outputs
-int debug = 1;
-int debug_scanfpassword = 1;
+int debug = 0;
+int debug_scanfpassword = 1; //set to 0 if using linux terminal (wip)
 
 //Initializing file name/s
 char *loginfile = "login_database.txt";
@@ -129,9 +136,16 @@ void customer_terminal(char *terminal_clear_string);
 
 /*******************************************************************/
 
+enum meter_size
+{
+    meter1 = 15, //15 millimeter
+    meter2 = 30, //30 millimeter
+    meter3 = 150, //150 millimeter
+};
+
 enum income_class
 {
-    Low = 125,//(daily usage up to 125 L)
+    Low = 125, //(daily usage up to 125 L)
     Low_Medium = 175, //(daily usage up to 175 L)
     Medium = 220, //(daily usage up to 220 L)
     Medium_High = 250, //(daily usage up to 250 L)
@@ -199,7 +213,7 @@ void main()
         //Appening title to Database 
         //( functions later in program dosent work if there isnt something in the .txt file )
         fp = fopen(loginfile, "a");
-        const char *text = "LOGIN DATABASE\n\nUserID: 10101010\nUser Email: admin@gmail.com\nHashed Password: BB33D8B\n;\n\n";
+        const char *text = "LOGIN DATABASE\n\nUserID: 10101010\nUser Email: admin@gmail.com\nHashed Password: DC19C0E\n;\n\n";
         fputs(text, fp);
             
         printf(" starter data inserted-");        
@@ -271,7 +285,7 @@ void main()
 /***************************** MAIN UI **************************/
     
     //Are you a registered user?
-    printf("\n\nAre you a register user? \n'Y' for yes\n'N' for no\n\n");
+    printf("\n\nAre you a registered user? \n'Y' for yes\n'N' for no\n\n");
     scanf(" %c", &registered);
     
     //structure variable <user>
@@ -412,7 +426,7 @@ void main()
         
         while (login_access != 0 && login_access != 2 && attempt < total_attempts)
         {
-            system(clear_terminal); //Clears command line UI
+            //system(clear_terminal); Clears command line UI
             printf(bold_start "\n---ACCOUNT LOGIN---\n" bold_end);
             
             printf("\n-Email or Password is incorrect - ");
@@ -475,7 +489,12 @@ void admin_terminal(char *terminal_clear_string)
 {
     int action;
     char str[max_e_length];
+    char customerID[max_length];
+    char send_back_variable;//Will be used in if function to send user back to select admin actions
+    char customers_to_view;
     FILE *auditpointer; // Creates file pointer for audit file
+    FILE *loginpointer; // Creates file pointer for login database file
+    FILE *customerdbpointer; // Creates file pointer for customer database file
 
 jump_admin_actions: ;
 
@@ -484,28 +503,111 @@ jump_admin_actions: ;
     printf(bold_start "\n---ADMIN TERMINAL---\n" bold_end);//Outputting header
     
     printf(underline_start"\nEnter choice of action:\n"underline_end);
-    printf("1 - Add customer/s\n");
-    printf("2 - Edit customer/s\n");
+    //printf("1 - Add customer/s\n");
+    //printf("2 - Edit customer/s\n");
     printf("3 - View customer/s\n");
-    printf("4 - Delete/Archive customer/s\n");
-    printf("5 - Generate Bill customer/s\n");
-    printf("6 - View reports\n");
+    //printf("4 - Delete/Archive customer/s\n");
+    //printf("5 - Generate Bill customer/s\n");
+    //printf("6 - View reports\n");
     printf("7 - View Audit Logs\n");
     printf("8 - Close Terminal\n\n");
     scanf(" %d", &action);
 
+    //Clears string to avoid overwriting or combining results from previous uses.
+    for(int i = 0; i < strlen(str); i++)
+    {
+        str[i] = 0;
+    }
+    
     system(terminal_clear_string);  //Clears command line UI
 
     switch(action)
     {
         case 1: // Add customer/s
-            //Code here
+            
+            
             break;
         case 2: // Edit customer/s
             //Code here
             break;
+            
         case 3: // View customer/s
-            //Code here
+            
+            customerdbpointer = fopen(customerdatabase, "r"); // attempts to open file in READ mode (r)
+            
+            if(customerdbpointer!=NULL) // File open attempt was successful
+            {
+                fseek(customerdbpointer,strlen("CUSTOMER DATABASE"),SEEK_SET); //Setting file pointer past header to save a small amount of time
+                
+                printf(underline_start"View all customers (A) or specific customer (P):\n"underline_end);
+                scanf(" %c", &customers_to_view); //reads characters from input stream (user)
+                
+                system(terminal_clear_string); // Clears command line UI
+                
+                printf("================== CUSTOMER DATABASE =================="); //Outputting file header
+                
+                if(customers_to_view == 'A')
+                // True if users enters nothing
+                {
+                    while(fgets(str, max_e_length,customerdbpointer) != NULL)
+                    //Explanation: while fgets isnt at the end of the file, do:
+                        
+                    {
+                        if(strstr( str, data_breakpoint) == NULL)
+                        /*Explanation: if "data_breakpoint" (which is ";") is not in current 
+                        line then:
+                        */
+                        {
+                            printf("%s",str);
+                        }
+                        else
+                        {
+                            printf("\n=======================================================\n");
+                        }
+                    }
+                }
+                else
+                {
+                    printf("\nEnter customer to lookup:\n");
+                    scanf(" %s", customerID);
+                    
+                    
+                    while(fgets(str, max_e_length,customerdbpointer) != NULL) // Reads through entire fill until the end is reached
+                    {
+                        if(strstr(str, customerID)!=NULL)
+                        // If ID entered is found do:
+                        {
+                            
+                        }
+                    }
+                }
+                
+                    
+                if(debug == 0)
+                {
+                    printf("\n -debug- data_breakpoint test: %s\n\n", data_breakpoint);
+                }
+                 
+                char send_back_variable;//Will be used in if function to send user 
+                                        //back to select admin actions
+            }
+            else
+            {
+                printf(file_open_error);
+            }
+            
+            
+            printf("When you're done enter X:\n");
+            scanf(" %c", &send_back_variable);
+            
+            if(send_back_variable == 'X' || send_back_variable == 'x')
+            {
+                goto jump_admin_actions; // Jumps code back to specified point if logic returns true
+            }
+            //fclose(auditpointer);
+            
+            
+            
             break;
         case 4: // Delete/Archive customer/s
             //Code here
@@ -516,20 +618,21 @@ jump_admin_actions: ;
         case 6: // View reports
             //Code here
             break;
+            
         case 7: // View Audit Logs
 
             auditpointer = fopen(auditfile, "r"); // attempts to open file in READ mode (r)
 
-            fseek(auditpointer,strlen("AUDIT LOGS"),SEEK_SET);
+            fseek(auditpointer,strlen("AUDIT LOGS"),SEEK_SET); //Setting file pointer past header to save a small amount of time
                     
-            printf("================== AUDIT LOGS =================="); //Outputting file ehader
+            printf("================== AUDIT LOGS =================="); //Outputting file header
 
             while(fgets(str, max_e_length,auditpointer) != NULL)
-            //Explanation: while fgets isnt at the end of the file
+            //Explanation: while fgets isnt at the end of the file, do:
 
             {
                 if(strstr( str, data_breakpoint) == NULL)
-                /*Explanation: if "data_breakpoint" (which is "\n:") is not in current 
+                /*Explanation: if "data_breakpoint" (which is ";") is not in current 
                 line then:
                 */
                 {
@@ -540,18 +643,15 @@ jump_admin_actions: ;
                     printf("\n================================================\n");
                 }
             }
-
+                
             if(debug == 0)
             {
                 printf("\n -debug- data_breakpoint test: %s\n\n", data_breakpoint);
             }
-
-            char send_back_variable;//Will be used in if function to send user 
-                                    //back to select admin actions
-
+                
             printf("When you're done enter X:\n");
             scanf(" %c", &send_back_variable);
-
+            
             if(send_back_variable == 'X' || send_back_variable == 'x')
             {
                 goto jump_admin_actions; // Jumps code back to specified point if logic returns true
