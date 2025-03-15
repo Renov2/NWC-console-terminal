@@ -20,8 +20,6 @@ Email "admin@gmail.com"
 #include <math.h>
 #include <conio.h>
 #include <ctype.h>
-//#include <termios.h>
-
 
 //constants for text cosmetics
 #define bold_start "\e[1m"
@@ -35,9 +33,9 @@ Email "admin@gmail.com"
 #define password_length 31
 #define starter_text "LOGIN DATABASE"
 #define file_open_error "-Error opening file-"
-#define data_breakpoint "\n;"
-#define max_ID 99999999
-#define min_ID 10000000
+#define data_breakpoint ";"
+#define max_ID 9999999
+#define min_ID 1000000
 
 //Keyboard ASCII map
 #define backspace_key 8
@@ -53,11 +51,12 @@ char terminal;
 char clear_terminal[5 +1];
 char hashed_password[50];
 char tempID_hold[max_length] = {0};
+int delay_time = 3;
 
 // set to 0 to see function outputs
 // set to 1 to not see function outputs
 int debug = 1;
-int debug_scanfpassword = 1;
+int debug_scanfpassword = 1; //set to 0 if using linux terminal (wip)
 
 //Initializing file name/s
 char *loginfile = "login_database.txt";
@@ -92,11 +91,8 @@ int addcustomer (char *filename, char *filename2, char *customerID,
 inputs are then checked across a database and a matched found**/
 // Returns 1 if login unsuccessful
 // Returns 0 if login successful
-// Returns 3 if login sucessful for ADMIN account
+// Returns 2 if login sucessful for admin account
 int user_login (char *email, char *password, char* tempID);
-
-/**5. Function --NOT USED--
-int getch();**/
 
 /**6. Function generates a random ID given length variable
 which determines how long the ID should be**/
@@ -118,11 +114,31 @@ void auditaddcustomer(int audit_type, char *customerID);
 
 /**11. Function that logs account login**/
 void auditlogin(int audit_type, char *customerID);
+
+
+/**12. Function delays next line execution by int passed
+through in seconds ( Method from https://stackoverflow.com/questions/3930363/implement-time-delay-in-c )**/
+void delay_cpu(float delay);
+
+void close_console(int *delay_time_seconds, float *print_delay);
+
+void admin_terminal(char *terminal_clear_string);
+
+void customer_terminal(char *terminal_clear_string);
+
+
 /*******************************************************************/
+
+enum meter_size
+{
+    meter1 = 15, //15 millimeter
+    meter2 = 30, //30 millimeter
+    meter3 = 150, //150 millimeter
+};
 
 enum income_class
 {
-    Low = 125,//(daily usage up to 125 L)
+    Low = 125, //(daily usage up to 125 L)
     Low_Medium = 175, //(daily usage up to 175 L)
     Medium = 220, //(daily usage up to 220 L)
     Medium_High = 250, //(daily usage up to 250 L)
@@ -149,7 +165,7 @@ struct audit
     char time[max_length];   
 };
 
-int main()
+void main()
 {
   
   //Checks what terminal the user is running so the clear command line function "system()"" works properly
@@ -262,7 +278,7 @@ int main()
 /***************************** MAIN UI **************************/
     
     //Are you a registered user?
-    printf("\n\nAre you a register user? \n'Y' for yes\n'N' for no\n\n");
+    printf("\n\nAre you a registered user? \n'Y' for yes\n'N' for no\n\n");
     scanf(" %c", &registered);
     
     //structure variable <user>
@@ -403,7 +419,7 @@ int main()
         
         while (login_access != 0 && login_access != 2 && attempt < total_attempts)
         {
-            system(clear_terminal); //Clears command line UI
+            system(clear_terminal); // Clears command line UI
             printf(bold_start "\n---ACCOUNT LOGIN---\n" bold_end);
             
             printf("\n-Email or Password is incorrect - ");
@@ -432,28 +448,301 @@ int main()
             attempt++;
         }
 
+        
+        if(debug == 0)
+        {
+            printf("\n\nLogin Access Variable: %d\n",login_access);
+        }
+
         //Check this variable when determining if the user should be given access to the program beyond this point
         if(login_access == 0)
         {
-            printf("\n\nlogin successful\n\n");
-            auditlogin(login_access,tempID_hold);
+            if(debug == 0)
+            {
+                printf("\n\nlogin successful - customer ACCOUNT -\n\n");
+                printf("==================================\n\n");
+            }
+        
+            customer_terminal(clear_terminal); //Starts up customer terminal
 
         }
         else if (login_access == 2)
         {
-            printf("\n\nlogin successful - ADMIN USER -\n\n");
+            if(debug == 0)
+            {
+                printf("\n\nlogin successful - admin ACCOUNT -\n\n"); 
+                printf("==================================\n\n");
+            }
+
             auditlogin(login_access,tempID_hold);
+            admin_terminal(clear_terminal); //Starts up admin terminal
         }
+        
     }
     //Terminate program
     else if(registered == 'N' || registered == 'n')
     {
-        printf(bold_start"\n-Application Closed-"bold_end);
+        close_console(&delay_time,1/10);
     }
-    
-    return 0;
+
 }
 
+/************************* ADMIN TERMINAL  **********************/
+
+void admin_terminal(char *terminal_clear_string)
+{
+    int action;
+    int found_ID = 1; //Default to false
+    int found_breakpoint = 1; //Default to false
+
+    char str[max_e_length];
+    char customerID[max_length];
+    char send_back_variable;//Will be used in if function to send user back to select admin actions
+    char customers_to_view;
+    char stall;
+
+    FILE *auditpointer; // Creates file pointer for audit file
+    FILE *loginpointer; // Creates file pointer for login database file
+    FILE *customerdbpointer; // Creates file pointer for customer database file
+
+jump_admin_actions: ;
+
+    if(debug == 0)
+    {
+        printf("Program paused to give user chance to see debug\nEnter any character to continue:\n");
+        scanf(" %c",&stall);
+    }
+
+    system(terminal_clear_string); //Clears command line UI
+
+    printf(bold_start "\n---ADMIN TERMINAL---\n" bold_end);//Outputting header
+    
+    printf(underline_start"\nEnter choice of action:\n"underline_end);
+    //printf("1 - Add customer/s\n");
+    //printf("2 - Edit customer/s\n");
+    printf("3 - View customer/s\n");
+    //printf("4 - Delete/Archive customer/s\n");
+    //printf("5 - Generate Bill customer/s\n");
+    //printf("6 - View reports\n");
+    printf("7 - View Audit Logs\n");
+    printf("8 - Close Terminal\n\n");
+    scanf(" %d", &action);
+
+    //Clears string to avoid overwriting or combining results from previous uses.
+    for(int i = 0; i < strlen(str); i++)
+    {
+        str[i] = 0;
+    }
+    
+    system(terminal_clear_string);  //Clears command line UI
+
+    switch(action)
+    {
+        case 1: // Add customer/s
+            
+            
+            break;
+        case 2: // Edit customer/s
+            //Code here
+            break;
+            
+        case 3: // View customer/s
+            
+            customerdbpointer = fopen(customerdatabase, "r"); // attempts to open file in READ mode (r)
+            
+            if(customerdbpointer!=NULL) // If File open attempt was successful
+            {
+                fseek(customerdbpointer,strlen("CUSTOMER DATABASE"),SEEK_SET); //Setting file pointer past header
+
+                printf(underline_start"View all customers (A) or specific customer (P):\n"underline_end);
+                scanf(" %c", &customers_to_view);
+                
+                /// OUTPUTTING ALL CUSTOMER DATA 
+                if(customers_to_view == 'A' || customers_to_view == 'a')
+                // True if user enters nothing
+                {
+                    system(terminal_clear_string); //Clears command line UI
+                    
+                    printf("================== CUSTOMER DATABASE =================="); //Outputting file header
+                    
+                    while(fgets(str, max_e_length,customerdbpointer) != NULL)
+                    //Explanation: while fgets isnt at the end of the file, do:
+                        
+                    {
+                        if(strstr( str, data_breakpoint) == NULL)
+                        /*Explanation: if "data_breakpoint" (which is ";") is not in current 
+                        line then:
+                        */
+                        {
+                            printf("%s",str);
+                        }
+                        else
+                        {
+                            printf("\n=======================================================\n");
+                        }
+                    }
+                }
+                
+                /// OUTPUTTING SPECIFIC CUSTOMER DATA
+                else if(customers_to_view == 'P' || customers_to_view == 'p')
+                {
+                    printf(underline_start"Enter customerID to lookup:\n"underline_end);
+                    scanf(" %s", customerID);
+
+                    //Sanitizing values ( removing new line values, carriages, white space and other unwanted characters)
+                    customerID[strcspn(customerID, "\n")] = '\0';
+                    
+                    while(duplicate_check(customerID,customerdatabase) == 2)
+                    //while duplicate data not found (information provided dosent exist in file checked)
+                    // do:
+                    {
+                        printf("\n-No such ID exists-\n");
+                        printf(underline_start"Enter new ID to lookup:\n"underline_end);
+                        scanf(" %s", customerID);
+                    }
+                    
+                    system(terminal_clear_string); // Clears command line UI
+                    
+                    printf("================== CUSTOMER DATABASE ==================\n\n"); //Outputting file header
+                    
+                    while(fgets(str, max_e_length,customerdbpointer) != NULL && found_breakpoint != 0) // Reads through entire file until the end is reached
+                    {
+                        
+                        if(strstr(str,customerID)!=NULL)
+                        {
+                            found_ID = 0;
+                        }
+                        
+                        if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
+                        {
+                            found_breakpoint = 0;
+                            
+                        }
+                        
+                        if(found_ID == 0 && strstr(str,data_breakpoint) == NULL)
+                        {
+                            printf("%s",str);
+                        }
+                        
+                    }
+                    
+                    printf("\n=======================================================\n\n");
+                }
+                    
+                if(debug == 0)
+                {           
+                    printf("=========== DEBUG DATA ===========");
+                    
+                    printf("\ndata_breakpoint char: %s\n\n", data_breakpoint);
+                    
+                    //ID taken from user debug
+                    if(customers_to_view == 'A' || customers_to_view == 'a')
+                    {
+                        printf("ID for lookup: NONE GIVEN");
+                    }
+                    else
+                    {
+                        printf("ID for lookup: %s\n",customerID);
+                    }
+                    printf("String length of ID: %lu\n\n",strlen(customerID));
+                    
+                    //ID info debug
+                    printf("Found ID int: %d\n", found_ID);
+                    
+                    //Breakpoint lookup debug
+                    printf("Found Breakpoint int: %d\n", found_breakpoint);
+                    
+                    printf("==================================\n\n");
+                }
+
+            }
+            else
+            {
+                printf(file_open_error);
+            }
+            
+            
+            printf("When you're done enter X:\n");
+            scanf(" %c", &send_back_variable);
+            
+            if(send_back_variable == 'X' || send_back_variable == 'x')
+            {
+                goto jump_admin_actions; // Jumps code back to specified point if logic returns true
+            }
+            //fclose(auditpointer);
+            
+            
+            
+            break;
+        case 4: // Delete/Archive customer/s
+            //Code here
+            break;
+        case 5: // Generate Bill customer/s
+            //Code here
+            break;
+        case 6: // View reports
+            //Code here
+            break;
+            
+        case 7: // View Audit Logs
+
+            auditpointer = fopen(auditfile, "r"); // attempts to open file in READ mode (r)
+
+            fseek(auditpointer,strlen("AUDIT LOGS"),SEEK_SET); //Setting file pointer past header to save a small amount of time
+                    
+            printf("================== AUDIT LOGS =================="); //Outputting file header
+
+            while(fgets(str, max_e_length,auditpointer) != NULL)
+            //Explanation: while fgets isnt at the end of the file, do:
+            {
+                if(strstr( str, data_breakpoint) == NULL)
+                /*Explanation: if "data_breakpoint" (which is ";") is not in current 
+                line then:
+                */
+                {
+                    printf("%s",str);
+                }
+                else
+                {
+                    printf("\n================================================\n");
+                }
+            }
+                
+            if(debug == 0)
+            {
+                printf("=========== DEBUG DATA ===========\n");
+                printf("data_breakpoint test: %s\n\n", data_breakpoint);
+                printf("==================================\n\n");
+            }
+                
+            printf("When you're done enter X:\n");
+            scanf(" %c", &send_back_variable);
+            
+            if(send_back_variable == 'X' || send_back_variable == 'x')
+            {
+                goto jump_admin_actions; // Jumps code back to specified point if logic returns true
+            }
+            //fclose(auditpointer);
+            break;
+
+        case 8: // Close terminal
+        
+            close_console(&delay_time,1/10);
+            break;
+    }
+
+}
+
+/************************* CUSTOMER TERMINAL  **********************/
+
+void customer_terminal(char *terminal_clear_string)
+{
+    system(terminal_clear_string); //Clears command line UI
+
+    printf(bold_start "\n---CUSTOMER TERMINAL---\n\n" bold_end);//Outputting header
+    close_console(&delay_time,1/10);
+
+}
 
 /************************* FUNCTION DEFINITION **********************/
 
@@ -502,10 +791,6 @@ int duplicate_check (char *data_to_check,char *filename)
             }
         }
     }
-    else
-    {
-
-    }
 
     return func_validation;
 }
@@ -537,6 +822,7 @@ int addcustomer (char *filename,char *filename2, char *customerID, char *user_fi
         hash_djb2(user_password,hashed_password);
         
         fputs(hashed_password, fp);
+        fputs("\n", fp);
         fputs(data_breakpoint, fp);
         fputs("\n\n", fp);
     }
@@ -562,6 +848,7 @@ int addcustomer (char *filename,char *filename2, char *customerID, char *user_fi
         
         fputs("User Last Name: ", fp);
         fputs(user_lastname, fp);
+        fputs("\n", fp);
         fputs(data_breakpoint, fp);
         fputs("\n\n", fp);
     }
@@ -586,7 +873,7 @@ checked against the user inputted data.
 **/
 // Returns 0 if login successful
 // Returns 1 if login unsuccessful
-// Returns 2 if login sucessful for ADMIN account
+// Returns 2 if login sucessful for admin account
 int user_login (char *email, char *password, char* tempID)
 {
     //1. Attempts to open file name stored in "loginfile" ( login_database.txt)
@@ -606,6 +893,7 @@ int user_login (char *email, char *password, char* tempID)
 
     if (fp != NULL)
     {
+        
         while(fgets(str,max_e_length,fp) != NULL)
         
         {
@@ -619,8 +907,9 @@ int user_login (char *email, char *password, char* tempID)
 
                 if(debug == 0)
                 {
-                    printf("\n\nFound: %s",tmpID_hold);
-                    printf("\nuserID pointer location: %ld\n", position1);
+                    printf("\n\n=========== DEBUG DATA ===========\n");
+                    printf("Raw string from txt file (ID lookup): %s\n",tmpID_hold);
+                    printf("userID pointer location: %ld\n", position1);
                 }
             }
             
@@ -629,20 +918,13 @@ int user_login (char *email, char *password, char* tempID)
                 //Assigns email found at if statement to found_email
                 char *found_email = strstr(str, email);
                 
-                if (debug == 0)
-                {
-                    printf("\ndebug - found email: %s",found_email);
-                    a = strlen(found_email);
-                    printf("strlen: %d", a);
-                }
-                
                 if (found_email != NULL)
                 {
                     strcpy(temp_email, found_email);
                     
                     if (debug == 0)
                     {
-                        printf("\ndebug - temp email: %s",temp_email);
+                        printf("\nRaw email string from txt file: %s",temp_email);
                         a = strlen(temp_email);
                         printf("strlen: %d", a);
                     }
@@ -652,7 +934,7 @@ int user_login (char *email, char *password, char* tempID)
                     
                     if (debug == 0)
                     {
-                        printf("\ndebug - temp email after sanitization: %s\n",temp_email);
+                        printf("\nEmail after sanitization (removing newline): %s\n",temp_email);
                         a = strlen(temp_email);
                         printf("strlen: %d\n", a);
                     }
@@ -747,7 +1029,7 @@ int user_login (char *email, char *password, char* tempID)
         if(fseek(fp,position1,SEEK_CUR)==0)//Brings file pointer 1 line before UserID associated with user credentials
                                            //if statement only continues if fseek was successful in moving pointer (returned 0)
         {
-            if(fgets(str,max_e_length,fp) != NULL)//Goes down by one line and stores string found in "str"
+            if(fgets(str,max_e_length,fp) != NULL)//Goes down by online and stores string found in "str"
             {
                 strcpy(tmpID_hold,str);
             }
@@ -765,12 +1047,12 @@ int user_login (char *email, char *password, char* tempID)
 
             if (debug == 0)
             {
-                printf("\n\nID passed through: %s\n",tempID);
+                printf("\n\nID send to audit function: %s\n",tempID);
             }
         }
         else if(fseek(fp,position1,SEEK_CUR) !=0 && debug == 0)
         {
-            printf("\nfseek aint working\n");
+            printf("\nfseek error\n");
         }
     }
 
@@ -778,38 +1060,18 @@ int user_login (char *email, char *password, char* tempID)
     return login_validation;
 }
 
-/**Definition of function 5.
-int getch()
-{
-    int ch;
-    // struct to hold the terminal settings
-    struct termios old_settings, new_settings;
-    // take default setting in old_settings
-    tcgetattr(STDIN_FILENO, &old_settings);
-    // make of copy of it (Read my previous blog to know 
-    // more about how to copy struct)
-    new_settings = old_settings;
-    // change the settings for by disabling ECHO mode
-    // read man page of termios.h for more settings info
-    new_settings.c_lflag &= ~(ICANON | ECHO);
-    // apply these new settings
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_settings);
-    // now take the input in this mode
-    ch = getchar();
-    // reset back to default settings
-    tcsetattr(STDIN_FILENO, TCSANOW, &old_settings);
-    return ch;   
-}**/
-
 //Definition of function 6.
 int generateID ()
 {
     srand(time(NULL));
-    // Generate random number between max ID value (99999999) and min ID value (10000000)
+    // Generate random number between max ID value (9999999) and min ID value (1000000)
     long long ID = ((long long)rand()*rand())%((max_ID-min_ID)+1);
 
     //DEBUG
-    //printf("\n\nFUNCTION ID TEST: %lld\n\n", ID);
+    if(debug == 0)
+    {
+        printf("\n\nFUNCTION ID TEST: %lld\n\n", ID);
+    }
     return ID;
 }
 
@@ -949,7 +1211,6 @@ void hash_djb2(char *password, char *hash_out)
 }
 
 //Defintion of function 10.
-
 void auditaddcustomer(int audit_type, char *customerID)
 {
     //AUDITING
@@ -978,13 +1239,14 @@ void auditaddcustomer(int audit_type, char *customerID)
             fputs(log.date, fp);
 
             //Format HOUR - MINUTE
-            fputs("Time: ", fp);
+            fputs("Time: (24 hour)", fp);
             fputs(log.time, fp);
             fputs("\n", fp);
 
             fputs("New account ID: ", fp);
             fputs(customerID, fp);
 
+            fputs("\n", fp);
             fputs(data_breakpoint, fp);
             fputs("\n\n", fp);
         }
@@ -1000,6 +1262,7 @@ void auditaddcustomer(int audit_type, char *customerID)
             fputs("Time: ", fp);
             fputs(log.time, fp);
                     
+            fputs("\n", fp);
             fputs(data_breakpoint, fp);
             fputs("\n", fp);
         }
@@ -1012,6 +1275,7 @@ void auditaddcustomer(int audit_type, char *customerID)
     fclose(fp);
 }
 
+//Defintion of function 12.
 void auditlogin(int audit_type, char *customerID)
 {
     //AUDITING
@@ -1038,17 +1302,18 @@ void auditlogin(int audit_type, char *customerID)
             fputs(log.date, fp);
 
             //Format HOUR - MINUTE
-            fputs("Time: ", fp);
+            fputs("Time (24 hour): ", fp);
             fputs(log.time, fp);
             fputs("\n", fp);
 
             fputs("ID of account login: ", fp);
             fputs(customerID, fp);
 
+            fputs("\n", fp);
             fputs(data_breakpoint, fp);
             fputs("\n\n", fp);
         }
-        else if (audit_type == 2) //ADMIN user logged in successfully
+        else if (audit_type == 2) //admin user logged in successfully
         {
             fputs("Account login (by admin)\n", fp);
                     
@@ -1057,13 +1322,14 @@ void auditlogin(int audit_type, char *customerID)
             fputs(log.date, fp);
 
             //Format HOUR - MINUTE
-            fputs("Time: ", fp);
+            fputs("Time (24 hour): ", fp);
             fputs(log.time, fp);
             fputs("\n", fp);
 
             fputs("ID of account login: ", fp);
             fputs(customerID, fp);
 
+            fputs("\n", fp);
             fputs(data_breakpoint, fp);
             fputs("\n\n", fp);
         }
@@ -1074,4 +1340,35 @@ void auditlogin(int audit_type, char *customerID)
     }
 
     fclose(fp);
+}
+
+//Defintion of function 13.
+void delay_cpu(float delay){
+    /* save start clock tick */
+    const clock_t start = clock();
+
+    clock_t current;
+    do{
+        /* get current clock tick */
+        current = clock();
+
+        /* break loop when the requested number of seconds have elapsed */
+    }while((float)(current-start)/CLOCKS_PER_SEC < delay);
+}
+
+//Definition of function 14
+void close_console(int *delay_time_seconds, float *print_delay)
+{
+    char hashtag = '#';
+
+    //Emulates program closing down 
+    printf("\nClosing Console: ");
+
+    for(int i = 0; i < ((*delay_time_seconds)*10); i ++)
+    {
+        printf("%c",hashtag);
+        delay_cpu(.1); // 2 second delay before next line executions
+    }
+
+    exit(0);
 }
