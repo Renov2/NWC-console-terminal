@@ -2,6 +2,8 @@
 <Author Name>
 Created Febraury 23, 2025
 
+//If using linux, change "_getwch()" to "getch()"
+
 NWC Complete MAIN UI
 - Account Registration
 - Account Login
@@ -20,8 +22,6 @@ Email "admin@gmail.com"
 #include <math.h>
 #include <conio.h>
 #include <ctype.h>
-//#include <termios.h>
-
 
 //constants for text cosmetics
 #define bold_start "\e[1m"
@@ -35,9 +35,9 @@ Email "admin@gmail.com"
 #define password_length 31
 #define starter_text "LOGIN DATABASE"
 #define file_open_error "-Error opening file-"
-#define data_breakpoint "\n;"
-#define max_ID 99999999
-#define min_ID 10000000
+#define data_breakpoint ";"
+#define max_ID 9999999
+#define min_ID 1000000
 
 //Keyboard ASCII map
 #define backspace_key 8
@@ -53,11 +53,12 @@ char terminal;
 char clear_terminal[5 +1];
 char hashed_password[50];
 char tempID_hold[max_length] = {0};
+int delay_time = 3;
 
 // set to 0 to see function outputs
 // set to 1 to not see function outputs
 int debug = 1;
-int debug_scanfpassword = 1;
+int debug_scanfpassword = 1; //set to 0 if using linux terminal (wip)
 
 //Initializing file name/s
 char *loginfile = "login_database.txt";
@@ -92,11 +93,8 @@ int addcustomer (char *filename, char *filename2, char *customerID,
 inputs are then checked across a database and a matched found**/
 // Returns 1 if login unsuccessful
 // Returns 0 if login successful
-// Returns 3 if login sucessful for ADMIN account
+// Returns 2 if login sucessful for admin account
 int user_login (char *email, char *password, char* tempID);
-
-/**5. Function --NOT USED--
-int getch();**/
 
 /**6. Function generates a random ID given length variable
 which determines how long the ID should be**/
@@ -118,11 +116,26 @@ void auditaddcustomer(int audit_type, char *customerID);
 
 /**11. Function that logs account login**/
 void auditlogin(int audit_type, char *customerID);
+
+
+/**12. Function delays next line execution by int passed
+through in seconds ( Method from https://stackoverflow.com/questions/3930363/implement-time-delay-in-c )**/
+void delay_cpu(float delay);
+
+void close_console(int *delay_time_seconds, float *print_delay);
+
 /*******************************************************************/
+
+enum meter_size
+{
+    meter1 = 15, //15 millimeter
+    meter2 = 30, //30 millimeter
+    meter3 = 150, //150 millimeter
+};
 
 enum income_class
 {
-    Low = 125,//(daily usage up to 125 L)
+    Low = 125, //(daily usage up to 125 L)
     Low_Medium = 175, //(daily usage up to 175 L)
     Medium = 220, //(daily usage up to 220 L)
     Medium_High = 250, //(daily usage up to 250 L)
@@ -149,10 +162,10 @@ struct audit
     char time[max_length];   
 };
 
-int main()
+void main()
 {
   
-  //Checks what terminal the user is running so the clear command line function "system()"" works properly
+  //Checks what terminal the user is running so the clear command line function "system()" works properly
     printf("-Are you on a windows or linux terminal -\n(L) for Linux\n(W) for Windows - Select this if unsure\n");
     scanf(" %c", &terminal);
     
@@ -163,6 +176,7 @@ int main()
     else if (terminal == 'L' || terminal == 'l')
     {
         strcpy(clear_terminal,"clear");
+        debug_scanfpassword = 0;
     }
     
     
@@ -188,9 +202,19 @@ int main()
         fclose(fp);
             
         //Appening title to Database 
-        //( functions later in program dosent work if there isnt something in the .txt file )
+        //( Inserting Starter data into txt file )
         fp = fopen(loginfile, "a");
-        const char *text = "LOGIN DATABASE\n\nUserID: 10101010\nUser Email: admin@gmail.com\nHashed Password: BB33D8B\n;\n\n";
+        const char *text;
+
+        if(terminal == 'W' || terminal == 'w')
+        {
+            text = "LOGIN DATABASE\n\nUserID: 10101010\nUser Email: admin@gmail.com\nHashed Password: BB33D8B\n;\n\n";
+        }
+        else if (terminal == 'L' || terminal == 'l') // Linux (atleast onlinegdb.com hashes admin password a little different. This accounts for that)
+        {
+            text = "LOGIN DATABASE\n\nUserID: 10101010\nUser Email: admin@gmail.com\nHashed Password: DC19C0E\n;\n\n";
+        }
+        
         fputs(text, fp);
             
         printf(" starter data inserted-");        
@@ -262,7 +286,7 @@ int main()
 /***************************** MAIN UI **************************/
     
     //Are you a registered user?
-    printf("\n\nAre you a register user? \n'Y' for yes\n'N' for no\n\n");
+    printf("\n\nAre you a registered user? \n'Y' for yes\n'N' for no\n\n");
     scanf(" %c", &registered);
     
     //structure variable <user>
@@ -403,7 +427,7 @@ int main()
         
         while (login_access != 0 && login_access != 2 && attempt < total_attempts)
         {
-            system(clear_terminal); //Clears command line UI
+            system(clear_terminal); // Clears command line UI
             printf(bold_start "\n---ACCOUNT LOGIN---\n" bold_end);
             
             printf("\n-Email or Password is incorrect - ");
@@ -432,28 +456,44 @@ int main()
             attempt++;
         }
 
+        
+        if(debug == 0)
+        {
+            printf("\n\nLogin Access Variable: %d\n",login_access);
+        }
+
         //Check this variable when determining if the user should be given access to the program beyond this point
         if(login_access == 0)
         {
-            printf("\n\nlogin successful\n\n");
+            if(debug == 0)
+            {
+                printf("\n\nlogin successful - customer ACCOUNT -\n\n");
+                printf("==================================\n\n");
+            }
             auditlogin(login_access,tempID_hold);
-
+	    close_console(&delay_time,1/10);
         }
         else if (login_access == 2)
         {
-            printf("\n\nlogin successful - ADMIN USER -\n\n");
+            if(debug == 0)
+            {
+                printf("\n\nlogin successful - admin ACCOUNT -\n\n"); 
+                printf("==================================\n\n");
+            }
+
             auditlogin(login_access,tempID_hold);
+	    close_console(&delay_time,1/10);
         }
+        
     }
     //Terminate program
     else if(registered == 'N' || registered == 'n')
     {
-        printf(bold_start"\n-Application Closed-"bold_end);
+	printf(bold_start"\n-Application Closed-"bold_end);
+        close_console(&delay_time,1/10);
     }
-    
-    return 0;
-}
 
+}
 
 /************************* FUNCTION DEFINITION **********************/
 
@@ -1074,4 +1114,33 @@ void auditlogin(int audit_type, char *customerID)
     }
 
     fclose(fp);
+}
+
+void close_console(int *delay_time_seconds, float *print_delay)
+{
+    char hashtag = '#';
+
+    //Emulates program closing down 
+    printf("\nClosing Console: ");
+
+    for(int i = 0; i < ((*delay_time_seconds)*10); i ++)
+    {
+        printf("%c",hashtag);
+        delay_cpu(.1); // 2 second delay before next line executions
+    }
+
+    exit(0);
+}
+
+void delay_cpu(float delay){
+    /* save start clock tick */
+    const clock_t start = clock();
+
+    clock_t current;
+    do{
+        /* get current clock tick */
+        current = clock();
+
+        /* break loop when the requested number of seconds have elapsed */
+    }while((float)(current-start)/CLOCKS_PER_SEC < delay);
 }
