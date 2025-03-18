@@ -1,26 +1,2 @@
 AUDIT LOGS
 
-Account login (by admin)
-Date: 03/12/2025
-Time: 17:01
-ID of account login: 10101010
-;
-
-Account login (by admin)
-Date: 03/12/2025
-Time: 17:03
-ID of account login: 10101010
-;
-
-Account created (by customer)
-Date: 03/12/2025
-Time: 17:04
-New account ID: 44847768
-;
-
-Account login (by customer)
-Date: 03/12/2025
-Time: 17:05
-ID of account login: 44847768
-;
-
