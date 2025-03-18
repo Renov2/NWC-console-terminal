@@ -10,3 +10,23 @@ User Email: yohanblake@gmail.com
 Hashed Password: 312CD27A
 ;
 
+UserID: 173682
+User Email: utech@gmail.com
+Hashed Password: 1394CAC2
+;
+
+UserID: 42989040
+User Email: jahleel@gmail.com
+Hashed Password: 1394CAC2
+;
+
+UserID: 6030010
+User Email: jahleelroberts002@gmail.com
+Hashed Password: 18C7E09F
+;
+
+UserID: 5343075
+User Email: test@yahoo.com
+Hashed Password: 18C7E09F
+;
+
