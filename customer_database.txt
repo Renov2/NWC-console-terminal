@@ -1,7 +1,40 @@
 CUSTOMER DATABASE
 
-UserID: 44847768
+UserID: 4484776
 User First Name: Yohan
 User Last Name: Blake
+;
+
+UserID: 1736820
+User First Name: Kevon
+User Last Name: Richard
+;
+
+UserID: 4298904
+User First Name: Mary
+User Last Name: Jane
+;
+
+UserID: 6030010
+User First Name: Peter
+User Last Name: Parker
+;
+
+UserID: 5343075
+User First Name: John
+User Last Name: Doe
+;
+
+UserID: 5343123
+User First Name: Troy
+User Last Name: Becham
+
+Premise ID #1: 7045521
+Meter Size #1: 30 
+Last Meter Reading #1: 0.00
+
+Premise ID #2: 7043456
+Meter Size #2: 150
+Last Meter Reading #2: 342.10
 ;
 
