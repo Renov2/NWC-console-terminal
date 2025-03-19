@@ -776,8 +776,16 @@ jump_admin_actions: ;
 
                         snprintf(strtemp,max_e_length,"Last Meter Reading #%d: %.2f",i+1, user.meter_reading[i]);  
                         fputs(strtemp, customerdbpointer);
-                        fputs("\n\n", customerdbpointer);  
 
+                        //Prevents double line space at the end of user record
+                        if(i != premisesamt-1)
+                        {
+                            fputs("\n\n", customerdbpointer); 
+                        }
+                        else
+                        {
+                            fputs("\n", customerdbpointer); 
+                        }
                     }
                     fputs(data_breakpoint, customerdbpointer);
                     fputs("\n\n", customerdbpointer);
