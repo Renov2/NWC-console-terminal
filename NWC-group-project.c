@@ -119,6 +119,8 @@ hashing algorithm**/
 void hash_djb2(char *password, char *hash_out);
 
 /**10. Function that logs account creation**/
+// 0 For account created by customer
+// 1 For account created by admin
 void auditaddcustomer(int audit_type, char *customerID);
 
 /**11. Function that logs account login**/
@@ -162,20 +164,6 @@ enum income_class
     Medium = 220, //(daily usage up to 220 L)
     Medium_High = 250, //(daily usage up to 250 L)
     High = 300, //(daily usage up to 300 L)
-};
-
-
-//Structure for all customer data
-struct customer
-{
-    char customerID[9];
-    char firstname[max_length];
-    char lastname[max_length];
-    char email[max_length];
-    char password[password_length + 1];
-    int income_class;
-    
-    char premisesID[9];
 };
 
 struct audit
@@ -234,6 +222,7 @@ int main()
         //Hashing admin password before storing it in file
         hash_djb2(admin_password,temp_password_hold_initilization);
 
+        //Formats and stores starter data in variable "text"
         snprintf(text,max_e_length,"LOGIN DATABASE\n\nUserID: 10101010\nUser Email: %s\nHashed Password: %s\n;\n\n",admin_email,temp_password_hold_initilization);
         
         fputs(text, fp);
@@ -305,6 +294,16 @@ int main()
     
     
 /***************************** MAIN UI **************************/
+
+//Structure for all customer data (required for login and registration)
+struct customer
+{
+    char customerID[9];
+    char firstname[max_length];
+    char lastname[max_length];
+    char email[max_length];
+    char password[password_length + 1];
+};
     
     //Are you a registered user?
     printf("\n\nAre you a registered user? \n'Y' for yes\n'N' for no\n\n");
@@ -391,11 +390,11 @@ int main()
             }
             
             //Inserting Data into their respective files
-            int fault_check = addcustomer(loginfile,customerdatabase,user.customerID,
+            int add_status = addcustomer(loginfile,customerdatabase,user.customerID,
                             user.firstname,user.lastname,user.email,
                             user.password,0);
 
-            auditaddcustomer(fault_check,user.customerID);
+            auditaddcustomer(add_status,user.customerID);
             
 
             system(clear_terminal); //Clears command line UI
@@ -477,6 +476,11 @@ int main()
             login_access = user_login(user.email,user.password,tempID_hold);
 
             attempt++;
+        }
+
+        if(total_attempts == attempt )
+        {
+            close_console(&delay_time,1/10);
         }
 
         
@@ -587,26 +591,20 @@ jump_admin_actions: ;
     printf("7 - View Audit Logs\n");
     printf("8 - Close Terminal\n\n");
     scanf(" %d", &action);
-
-    //Clears string to avoid overwriting or combining results from previous uses.
-    for(int i = 0; i < strlen(str); i++)
-    {
-        str[i] = 0;
-    }
     
     system(terminal_clear_string);  //Clears command line UI
 
     switch(action)
     {
         case 1: // Add customer/s
-            printf("================== CUSTOMER DATABASE ==================\n"); //Outputting file header           
+            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header           
             printf(id_prefix"\n");
             printf(fname_prefix"\n");
-            printf(lname_prefix"%s\n",user.lastname);
+            printf(lname_prefix"\n");
             printf("Premise ID (1-5): \n");
             printf("Meter Size: \n");
             printf("Last Meter Reading: \n");
-            printf("=======================================================\n");
+            printf("============================================================\n");
 
             printf(underline_start"\nEnter customer ID ( 7 digits ): \n"underline_end);
             scanf(" %s", user.customerID);
@@ -623,7 +621,6 @@ jump_admin_actions: ;
             //Ensuring no dupliciate IDs can be made
             while(duplicate_check(user.customerID,customerdatabase) != 2)
             {
-
                 printf(bold_start"\n-ID already in use-\n"bold_end);
                 printf(underline_start"\nEnter new Customer ID:\n"underline_end);
                 scanf(" %s", user.customerID);
@@ -631,10 +628,9 @@ jump_admin_actions: ;
 
             system(terminal_clear_string); // Clears command line UI
 
-            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header           
+            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header with user entered data     
             printf(id_prefix"%s\n",user.customerID);
-            printf(fname_prefix"%s\n",user.firstname);
-            printf(lname_prefix"%s\n",user.lastname);
+            printf(fname_prefix"\n");
             printf("Premise ID: \n");
             printf("Meter Size: \n");
             printf("Last Meter Reading: \n");
@@ -645,10 +641,10 @@ jump_admin_actions: ;
 
             system(terminal_clear_string); // Clears command line UI
             
-            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header           
+            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header with user entered data           
             printf(id_prefix"%s\n",user.customerID);
             printf(fname_prefix"%s\n",user.firstname);
-            printf(lname_prefix"%s\n",user.lastname);
+            printf(lname_prefix"\n");
             printf("Premise ID: \n");
             printf("Meter Size: \n");
             printf("Last Meter Reading: \n");
@@ -659,7 +655,7 @@ jump_admin_actions: ;
 
             system(terminal_clear_string); // Clears command line UI
 
-            printf("================== CUSTOMER DATABASE DEMO ==================\n"underline_end); //Outputting file header           
+            printf("================== CUSTOMER DATABASE DEMO ==================\n"underline_end); //Outputting file header with user entered data               
             printf(id_prefix"%s\n",user.customerID);
             printf(fname_prefix"%s\n",user.firstname);
             printf(lname_prefix"%s\n",user.lastname);
@@ -671,6 +667,7 @@ jump_admin_actions: ;
             printf(underline_start"How many Premises would you like to add (Max 5): \n"underline_end);
             scanf(" %d", &premisesamt);
 
+            //Ensuring user cannot select more than 5 premises to add
             while(premisesamt>5)
             {
                 printf(bold_start"\n\nMaximum Number of premises per Customer is 5\n\n"bold_end);
@@ -678,16 +675,18 @@ jump_admin_actions: ;
                 scanf(" %d", &premisesamt);
             }
 
+            //Gettings Premises details 
             for(int i = 0; i < premisesamt; i++)
             {
                 system(terminal_clear_string); // Clears command line UI
-                printf(underline_start"Enter premises ID #%d: \n"underline_end,i+1);
+                printf(underline_start"Enter premises ID (7 digits) #%d: \n"underline_end,i+1);
                 scanf(" %s",strtemp);
 
+                //Ensuring Premises ID entered is 7 digits long
                 while(strlen(strtemp)!=7)
                 {
                     printf(bold_start"\n\n-Max & Min ID size is (7) digits-\n\n"bold_end);
-                    printf(underline_start"\nEnter premises ID #%d: \n"underline_end,i+1);
+                    printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
                     scanf(" %s",strtemp);
                 }
 
@@ -702,13 +701,17 @@ jump_admin_actions: ;
                 strcpy(user.premisesID[i],strtemp);
 
 
-                printf(underline_start"\nEnter Meter size #%d:\n"underline_end,i+1);
+                printf(underline_start"\nEnter Meter size (150mm - 30mm - 15mm) #%d:\n"underline_end,i+1);
                 scanf("%d",&user.meter_size[i]);
 
-                while(user.meter_size[i] != 150 && user.meter_size[i] != 30 && user.meter_size[i] != 15)
+                //Ensuring user can only select one of 3 options available
+                //Meter size 1 - 150
+                //Meter size 2 - 30
+                //Meter size 3 - 15
+                while(user.meter_size[i] != meter1 && user.meter_size[i] != meter2 && user.meter_size[i] != meter3)
                 {
                     printf(bold_start"\n\n-Invalid meter size-\n"bold_end);
-                    printf(underline_start"\nEnter VALID Meter size #%d:\n"underline_end, i+1);
+                    printf(underline_start"\nEnter VALID Meter size (150mm - 30mm - 15mm) #%d:\n"underline_end, i+1);
                     scanf("%d",&user.meter_size[i]);
                 }
 
@@ -719,7 +722,7 @@ jump_admin_actions: ;
 
             system(terminal_clear_string); // Clears command line UI
 
-            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header           
+            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header with user entered data              
             printf(id_prefix"%s\n",user.customerID);
             printf(fname_prefix"%s\n",user.firstname);
             printf(lname_prefix"%s\n\n",user.lastname);
@@ -728,7 +731,7 @@ jump_admin_actions: ;
             {
                 printf("Premise ID #%d: %s\n",i+1, &user.premisesID[i][0]);
                 printf("Meter Size #%d: %d\n",i+1,user.meter_size[i]);
-                printf("Last Meter Reading #%d: %.2f\n",i+1, user.meter_reading[i]);
+                printf("Last Meter Reading #%d: %.2f\n\n",i+1, user.meter_reading[i]);
             }
             printf("============================================================\n\n");
 
@@ -740,49 +743,58 @@ jump_admin_actions: ;
             {
                 customerdbpointer = fopen(customerdatabase, "a");
                 
-                //appends data passed through into file opened previously ^
-                fputs(id_prefix, customerdbpointer);
-                fputs(user.customerID, customerdbpointer);
-                fputs("\n", customerdbpointer);
-                    
-                fputs(fname_prefix, customerdbpointer);
-                fputs(user.firstname, customerdbpointer);
-                fputs("\n", customerdbpointer);
-                
-                fputs(lname_prefix, customerdbpointer);
-                fputs(user.lastname, customerdbpointer);
-                fputs("\n\n", customerdbpointer);
-                
-                for(int i = 0; i < premisesamt; i++)
+                if(customerdbpointer!=NULL)
                 {
-                    clear_stringarray(strtemp);
-
-                    snprintf(strtemp,max_e_length,"Premise ID #%d: %s",i+1, &user.premisesID[i][0]);
-                    fputs(strtemp, customerdbpointer);
+                    //appends data passed to customer database
+                    fputs(id_prefix, customerdbpointer);
+                    fputs(user.customerID, customerdbpointer);
+                    fputs("\n", customerdbpointer);
+                        
+                    fputs(fname_prefix, customerdbpointer);
+                    fputs(user.firstname, customerdbpointer);
                     fputs("\n", customerdbpointer);
                     
-                    clear_stringarray(strtemp);
+                    fputs(lname_prefix, customerdbpointer);
+                    fputs(user.lastname, customerdbpointer);
+                    fputs("\n\n", customerdbpointer);
+                    
+                    for(int i = 0; i < premisesamt; i++)
+                    {
+                        clear_stringarray(strtemp);
 
-                    snprintf(strtemp,max_e_length,"Meter Size #%d: %d",i+1, user.meter_size[i]);  
-                    fputs(strtemp, customerdbpointer);
-                    fputs("\n", customerdbpointer);
+                        snprintf(strtemp,max_e_length,"Premise ID #%d: %s",i+1, &user.premisesID[i][0]);
+                        fputs(strtemp, customerdbpointer);
+                        fputs("\n", customerdbpointer);
+                        
+                        clear_stringarray(strtemp);
 
-                    clear_stringarray(strtemp);
+                        snprintf(strtemp,max_e_length,"Meter Size #%d: %d",i+1, user.meter_size[i]);  
+                        fputs(strtemp, customerdbpointer);
+                        fputs("\n", customerdbpointer);
 
-                    snprintf(strtemp,max_e_length,"Last Meter Reading #%d: %.2f",i+1, user.meter_reading[i]);  
-                    fputs(strtemp, customerdbpointer);
-                    fputs("\n", customerdbpointer);  
+                        clear_stringarray(strtemp);
 
+                        snprintf(strtemp,max_e_length,"Last Meter Reading #%d: %.2f",i+1, user.meter_reading[i]);  
+                        fputs(strtemp, customerdbpointer);
+                        fputs("\n\n", customerdbpointer);  
+
+                    }
+                    fputs(data_breakpoint, customerdbpointer);
+                    fputs("\n\n", customerdbpointer);
+
+                    printf(bold_start"\n\nData Added Successfully\n"bold_end);
+
+                    printf("\nWhen you're done enter X:\n");
+                    scanf(" %c", &send_back_variable);
+                    
+                    auditaddcustomer(1, user.customerID);
+
+                    fclose(customerdbpointer);
                 }
-                fputs(data_breakpoint, customerdbpointer);
-                fputs("\n\n", customerdbpointer);
-
-
-                printf("\nWhen you're done enter X:\n");
-                scanf(" %c", &send_back_variable);
-                
-                fclose(customerdbpointer);
-
+                else
+                {
+                    printf(file_open_error);
+                }
                 if(send_back_variable == 'X' || send_back_variable == 'x')
                 {
                     goto jump_admin_actions; // Jumps code back to specified point if logic returns true
@@ -1614,21 +1626,25 @@ void auditaddcustomer(int audit_type, char *customerID)
             fputs(data_breakpoint, fp);
             fputs("\n\n", fp);
         }
-        else if (audit_type == 1) //Attempt to add a customer failed
+        else if (audit_type == 1) //Customer was added successfully by admin
         {
-            fputs("Failed to create account (by customer)\n", fp);
+            fputs("Account created (by admin)\n", fp);
                     
             //Format MONTH - DAY - YEAR
-                fputs("Date: ", fp);
-                fputs(log.date, fp);
+            fputs("Date: ", fp);
+            fputs(log.date, fp);
 
             //Format HOUR - MINUTE
-            fputs("Time: ", fp);
+            fputs("Time: (24 hour)", fp);
             fputs(log.time, fp);
-                    
+            fputs("\n", fp);
+
+            fputs("New account ID: ", fp);
+            fputs(customerID, fp);
+
             fputs("\n", fp);
             fputs(data_breakpoint, fp);
-            fputs("\n", fp);
+            fputs("\n\n", fp);
         }
     }
     else
