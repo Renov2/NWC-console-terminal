@@ -4,8 +4,6 @@ Created Febraury 23, 2025
 
 //If using linux, change "_getwch()" to "getch()"
 
-\\WORKING ON EDIT CUSTOMER
-
 NWC Complete MAIN UI
 - Account Registration
 - Account Login
@@ -60,6 +58,7 @@ Email "admin@gmail.com"
 #define premisesid_prefix "Premises ID #"
 #define metersize_prefix "Meter Size #"
 #define lastmeter_r_prefix "Last Meter Reading #"
+#define status_prefix "User Status: "
 
 //Initalizing variables
 char registered;
@@ -73,7 +72,7 @@ float print_delay = .05;
 
 // set to 0 to see function outputs
 // set to 1 to not see function outputs
-int debug = 1;
+int debug = 0;
 int debug_scanfpassword = 1; //set to 0 if using linux terminal (wip)
 
 //Initializing file name/s
@@ -89,7 +88,6 @@ char admin_password[] = "00000000";
 /**1. Function that checks if a file under the stated
 name, already exists**/
 int does_file_exist (const char *filename);
-
 
 /**2. Function that checks if data entered already
 exists on a given file. A prefix is used so that the function looks for the correct
@@ -159,12 +157,22 @@ what must be put in said place as a replacement*/
 // Returns 0 if successful edit was made
 //int edit_record(const char *file_to_open,long unsigned position_in_file_edit,char *replacement_string);
 
+/*17. Function that takes in a string and a prefix to remove. if said prefix is found in string then
+it is removed*/
+void remove_prefix(char *string_to_edit, char *prefix_to_remove);
+
+/*18. Function that takes in a customer ID as a string and checks if said customer is active or archived*/
+// 0 if user is Active
+// 1 if user is Archived
+// 2 if user could not be found
+int get_user_status(char* customerID_for_lookup);
+
 //Terminals
 void admin_terminal(char *terminal_clear_string);
 
 void customer_terminal(char *terminal_clear_string);
 
-void remove_prefix(char *string_to_edit, char *prefix_to_remove);
+
 /*******************************************************************/
 
 enum meter_size
@@ -189,7 +197,7 @@ struct audit
     char time[max_length];   
 };
 
-int main()
+void main()
 {
   
   //Checks what terminal the user is running so the clear command line function "system()" works properly
@@ -326,7 +334,7 @@ int main()
     printf("\n\nAre you a registered user? \n(Y) for yes\n(N) for no\n\n");
     scanf(" %c", &registered);
     
-    while(registered!='N'&&registered!='N'&&registered!='Y'&&registered!='y')
+    while(registered!='N'&&registered!='n'&&registered!='Y'&&registered!='y')
     {
         fflush(stdin);
         system(clear_terminal);
@@ -433,8 +441,6 @@ int main()
         {
             printf("\n-Login database could not be accessed-");
         }
-    
-    return 0;
     }
 
     
@@ -557,6 +563,7 @@ void admin_terminal(char *terminal_clear_string)
     typedef struct 
     {
         char customerID[max_length];
+        char status[max_length];
         char firstname[max_length];
         char lastname[max_length];
         char email[max_length];
@@ -589,7 +596,6 @@ void admin_terminal(char *terminal_clear_string)
     FILE *loginpointer; // Creates file pointer for login database file
     FILE *customerdbpointer; // Creates file pointer for customer database file
     FILE *temp_pointer; // Creates file pointer ( used in making edits to records )
-    FILE *temp_pointer2; // Creates file pointer ( used in making edits to records )
 
     long int id_location;
 
@@ -837,11 +843,13 @@ jump_admin_actions: ;
             long unsigned email_location = 0;
             long unsigned fname_location = 0;
             long unsigned lname_location = 0;
+            long unsigned user_status_location = 0;
             long unsigned premisesID_location[5];
             int meter_size_location[5] = {0};
             int last_meter_r_location[5] = {0};
             int current_line;
             int user_has_email = 1; //1 for false - 0 for true
+            int fault_check;
             premisesamt = 0; // Clear any value stored from previous actions
 
             printf(underline_start"Enter ID of customer you'd like to Edit:\n"underline_end);
@@ -852,8 +860,17 @@ jump_admin_actions: ;
             //while duplicate data not found (information provided dosent exist in file checked)
             // do:
             {
-                printf(bold_start"\n-No such ID exists-\n"bold_end);
+                printf(bold_start"\n-No such ID exists-\n\n"bold_end);
                 printf(underline_start"Enter ID of customer you'd like to Edit:\n"underline_end);
+                fflush(stdin);
+                scanf(" %s", user.customerID);
+            }
+
+            while(get_user_status(user.customerID) != 0)
+            //Checks if customer account is archived
+            {
+                printf(bold_start"\n-This customer account is archived-\n\n"bold_end);
+                printf(underline_start"Enter ID of ACTIVE customer you'd like to Edit:\n"underline_end);
                 fflush(stdin);
                 scanf(" %s", user.customerID);
             }
@@ -930,6 +947,13 @@ jump_admin_actions: ;
                         strcpy(user.lastname,str);
                         lname_location = current_line;
                     }
+                    //Getting account status
+                    else if(found_ID == 0 && strstr(str,status_prefix) != NULL)
+                    {
+                        strcpy(user.status,str);
+                        user_status_location = current_line;
+                    }
+
 
                     //Getting premises info
                     char final_prefix[max_length];
@@ -1011,11 +1035,13 @@ jump_admin_actions: ;
                 }
                 remove_prefix(user.firstname,fname_prefix);
                 remove_prefix(user.lastname,lname_prefix);
+                remove_prefix(user.status,status_prefix);
 
                 //Removes "\n" from string/s
                 strsanitize(user.email,0);
                 strsanitize(user.firstname,0);
                 strsanitize(user.lastname,0);
+                strsanitize(user.status,0);
 
                 ///Outputting current user data
                 printf(text_red_start"UserID: %s\n"text_color_end,user.customerID);
@@ -1063,6 +1089,9 @@ jump_admin_actions: ;
                     printf("\n=========== DEBUG DATA ===========\n");
                     printf("UserID (from user): %s\n",user.customerID);
                     printf("UserID strlen: %lu\n",strlen(user.customerID));
+
+                    printf("User Status location: %lu\n",user_status_location);
+
                     if(strlen(user.email)>11) // Email match was found
                     {
                         printf("\nEmail (from file): %s\n",user.email);
@@ -1135,19 +1164,19 @@ jump_admin_actions: ;
                 printf(underline_start"\nWhat would you like to edit? (text in "text_red_start"red, CANNOT"text_color_end underline_start" be edited):\n"underline_end);
                 if(user_has_email != 1 && premisesamt > 0) // If user has email linked to ID/account and they own premises, do:
                 {
-                    printf("(1) - Email\n(2) - First Name\n(3) - Last name\n(4) - Meter Size\n(5) - Meter Reading\n(6) - All Fields\n");
+                    printf("(1) - Email\n(2) - First Name\n(3) - Last name\n(4) - Meter Size\n(5) - Meter Reading\n(6) - All Fields\n(7) - Archive Account\n");
                 }
                 else if(user_has_email == 1 && premisesamt > 0) //Has no email but has premises
                 {
-                    printf(text_red_start"(1) - Email"text_color_end"\n(2) - First Name\n(3) - Last name\n(4) - Meter Size\n(5) - Meter Reading\n(6) - All Fields\n");
+                    printf(text_red_start"(1) - Email"text_color_end"\n(2) - First Name\n(3) - Last name\n(4) - Meter Size\n(5) - Meter Reading\n(6) - All Fields\n(7) - Archive Account\n");
                 }
                 else if (user_has_email != 1 && premisesamt == 0) //Has email but no premises
                 {
-                    printf("(1) - Email\n(2) - First Name\n(3) - Last name\n(4) - All Fields\n");
+                    printf("(1) - Email\n(2) - First Name\n(3) - Last name\n(4) - All Fields\n(5) - Archive Account\n");
                 }
                 else if (user_has_email == 1 && premisesamt == 0) //Has no email and no premises
                 {
-                    printf(text_red_start"(1) - Email"text_color_end"\n(2) - First Name\n(3) - Last name\n(4) - All Fields\n");
+                    printf(text_red_start"(1) - Email"text_color_end"\n(2) - First Name\n(3) - Last name\n(4) - All Fields\n(5) - Archive Account\n");
                 }
                 
                 
@@ -1157,16 +1186,17 @@ jump_admin_actions: ;
                 printf("(0) - Return To Actions Menu\n");
 
                 //Getting users choice
-                scanf(" %1d",&choice);
+                scanf(" %d",&choice);
 
                 clear_stringarray(strtemp);
+
 
                 //Exit to action menu condition
                 if(choice == 0)
                 {
                     goto jump_admin_actions; // Jumps code back to specified point if logic returns true
                 }
-
+                
                 //CHANGING EMAIL
                 else if(choice == 1)
                 {
@@ -1275,7 +1305,7 @@ jump_admin_actions: ;
                                 else
                                 {
                                     printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                    audit_editcustomer(choice,user.customerID);
+                                    audit_editcustomer(1,user.customerID);
                                 }
                             }
                             else
@@ -1374,7 +1404,7 @@ jump_admin_actions: ;
                             else
                             {
                                 printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                audit_editcustomer(choice,user.customerID);
+                                audit_editcustomer(2,user.customerID);
                             }
                         }
                         else
@@ -1466,7 +1496,7 @@ jump_admin_actions: ;
                             else
                             {
                                 printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                audit_editcustomer(choice,user.customerID);
+                                audit_editcustomer(3,user.customerID);
                             }
                         }
                         else
@@ -1485,7 +1515,7 @@ jump_admin_actions: ;
                 {
                     i = 0;
                     printf(underline_start"\nWhat meter # would you like to change?\n"underline_end);
-                    scanf("%1d",&choice);
+                    scanf("%d",&choice);
 
                     //Ensuring user can't edit meter that customer dosen't haves
                     while(choice > premisesamt)
@@ -1563,7 +1593,7 @@ jump_admin_actions: ;
                     
                             if(remove(customerdatabase) != 0)
                             {
-                                if(debug == 0)
+                                if(debug == 1)
                                 {
                                     perror("\nError msg");
                                     printf(bold_start"\n-Failed to Remove File-\n"bold_end);
@@ -1571,7 +1601,7 @@ jump_admin_actions: ;
                             }  
                             else if(rename(filename_temp,customerdatabase) != 0)
                             {
-                                if(debug == 0)
+                                if(debug == 1)
                                 {
                                     perror("\nError msg");
                                     printf(bold_start"\n-Failed to Replace File-\n"bold_end);
@@ -1580,7 +1610,7 @@ jump_admin_actions: ;
                             else
                             {
                                 printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                audit_editcustomer(choice,user.customerID);
+                                audit_editcustomer(4,user.customerID);
                             }
                         }
                     }
@@ -1682,7 +1712,7 @@ jump_admin_actions: ;
                             else
                             {
                                 printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                audit_editcustomer(choice,user.customerID);
+                                audit_editcustomer(5,user.customerID);
                             }
                         }
                     }
@@ -1889,7 +1919,6 @@ jump_admin_actions: ;
                                 else
                                 {
                                     printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                    audit_editcustomer(choice,user.customerID);
                                 }
                                 
                             }   
@@ -2019,7 +2048,7 @@ jump_admin_actions: ;
                                 if(user_has_email != 0)
                                 {
                                     printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                    audit_editcustomer(choice,user.customerID);
+                                    audit_editcustomer(6,user.customerID);
                                 }
                             }
 
@@ -2031,13 +2060,135 @@ jump_admin_actions: ;
                     }
                 }
             
+                //CHANGING CUSTOMER STATUS
+                else if (premisesamt > 0 && choice == 7 || premisesamt == 0 && choice == 5)
+                {
+                    int login_access;
+                    clear_stringarray(strtemp);
+                    clear_stringarray(filename_temp);
+
+                    printf(bold_start"\nConfirm deactivation request for customer (%s) ? (Y) Yes OR (X) no\nYou will be taken back to admin actions menu after selection\n"text_red_start"THIS ACTION CANNOT BE UNDONE\n"text_color_end bold_end,user.customerID);
+                    scanf(" %1c", &send_back_variable);
+
+                    if(send_back_variable == 'Y' || send_back_variable == 'y')
+                    {
+                        printf(bold_start"\nEnter Admin Credentials to Proceed with action\n"bold_end);
+                        printf(underline_start"\nEnter Email\n"underline_end);
+                        scanf(" %s",user.email);
+
+                        printf(underline_start"\nEnter Password\n"underline_end);
+                        fflush(stdin);
+                        if(terminal == 'L' || terminal == 'l')
+                        {
+                            scanf(" %s",user.password);
+                        }
+                        else if(terminal == 'W' || terminal == 'w')
+                        {
+                           scanfpassword(user.password); 
+                        }
+                        
+                        login_access = user_login(user.email,user.password,strtemp);
+
+                        if(debug == 1)
+                        {
+                            printf("\nLogin access check: %d\n",login_access);
+                        }
+
+                        if(login_access == 2)
+                        {
+                            clear_stringarray(filename_temp);
+                            clear_stringarray(str);
+                            
+                            //Creating temporary file to make edits
+                            strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
+                            
+                            int a = 0;
+                            for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
+                            {
+                                if(a<2)
+                                {
+                                    filename_temp[strlen(filename_temp)-(b+a)] = '\0';
+                                    a++;            
+                                }
+                        
+                            }
+                            strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
+                            strcat(filename_temp,".txt"); // Adds back .txt to file name
+                        
+                            temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
+                            //Temporary file now created
+                        
+                            fseek(customerdbpointer,0,SEEK_SET); //Resests pointer to start of file
+                            
+                            if(temp_pointer != NULL && customerdbpointer != NULL) // If both files open successfully
+                            //do:
+                            {
+                                current_line = 1;
+                                while(fgets(str,max_e_length,customerdbpointer)!=NULL)
+                                {
+                                    if(current_line == user_status_location)
+                                    {
+                                        snprintf(strtemp,max_e_length,status_prefix"ARCHIVED\n");
+                                        fputs(strtemp,temp_pointer);
+                                    }
+                                    else
+                                    {
+                                        fputs(str,temp_pointer);
+                                    }
+                                    current_line++;
+                                }
+                            
+                                fclose(customerdbpointer);
+                                fclose(temp_pointer);
+                                clear_stringarray(str);
+                                clear_stringarray(strtemp);
+                        
+                                if(remove(customerdatabase) != 0)
+                                {
+                                    if(debug == 0)
+                                    {
+                                        perror("\nError msg");
+                                        printf(bold_start"\n-Failed to Remove File-\n"bold_end);
+                                    }
+                                }  
+                                else if(rename(filename_temp,customerdatabase) != 0)
+                                {
+                                    if(debug == 0)
+                                    {
+                                        perror("\nError msg");
+                                        printf(bold_start"\n-Failed to Replace File-\n"bold_end);
+                                    }
+                                }
+                                else
+                                {
+                                    printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
+                                    audit_editcustomer(7,user.customerID);
+                                }
+                            }
+                            else
+                            {
+                                printf(file_open_error);
+                            }
+                        }
+                        else
+                        {
+                            printf(bold_start"\nINVALID CREDENTIALS - Customer status change aborted\n"bold_end);
+                        }
+                    }
+                    else if(send_back_variable == 'X' || send_back_variable == 'x')
+                    {
+                        goto jump_admin_actions; // Jumps code back to specified point if logic returns true
+                    }
+                }
             }
             
             printf("\nWhen you're done enter X:\n");
             scanf(" %c", &send_back_variable);
             if(send_back_variable == 'X' || send_back_variable == 'x')
             {
-
+                fclose(temp_pointer);
+                fclose(customerdbpointer);
+                fclose(loginpointer);
                 goto jump_admin_actions; // Jumps code back to specified point if logic returns true
             }
             
@@ -2079,7 +2230,15 @@ jump_admin_actions: ;
                         line then:
                         */
                         {
-                            printf("%s",str);
+                            //Displaying archived customer status as RED
+                            if(strstr(str,status_prefix"ARCHIVED")!=NULL)
+                            {
+                                printf(text_red_start"%s"text_color_end,str);
+                            }
+                            else
+                            {
+                                printf("%s",str);
+                            }
                         }
                         else
                         {
@@ -2152,6 +2311,7 @@ jump_admin_actions: ;
                         }
                     }
                     
+
                     //Resetting values
                     found_ID = 1;
                     found_breakpoint = 1;
@@ -2179,7 +2339,15 @@ jump_admin_actions: ;
                         
                         if(found_ID == 0 && strstr(str,data_breakpoint) == NULL)
                         {
-                            printf("%s",str);
+                            //Displaying archived customer status as RED
+                            if(strstr(str,status_prefix"ARCHIVED")!=NULL)
+                            {
+                                printf(text_red_start"%s"text_color_end,str);
+                            }
+                            else
+                            {
+                                printf("%s",str);
+                            }
                         }
                         
                     }
@@ -2313,9 +2481,14 @@ jump_admin_actions: ;
 
 void customer_terminal(char *terminal_clear_string)
 {
+    char close;
     system(terminal_clear_string); //Clears command line UI
 
     printf(bold_start "\n---CUSTOMER TERMINAL---\n\n" bold_end);//Outputting header
+
+    printf("Work in Progresss...enter character to close:\n");
+    scanf(" %c",&close);
+    
     close_console(delay_time,print_delay);
 
 }
@@ -2384,7 +2557,7 @@ int addcustomer (char *filename,char *filename2, char *customerID, char *user_fi
     {
         if(add_type != 1 )//appends data passed through into file opened previously ^
         {
-            fputs("UserID: ", fp);
+            fputs(id_prefix, fp);
             fputs(customerID, fp);
             fputs("\n", fp);
                     
@@ -2392,7 +2565,7 @@ int addcustomer (char *filename,char *filename2, char *customerID, char *user_fi
             fputs(user_email, fp);
             fputs("\n", fp);
                     
-            fputs("Hashed Password: ", fp);
+            fputs(password_prefix, fp);
             
             //Hashing password & storing said hash in password variable
             hash_djb2(user_password,hashed_password);
@@ -2415,15 +2588,18 @@ int addcustomer (char *filename,char *filename2, char *customerID, char *user_fi
     if(fp != NULL)
     {
         //appends data passed through into file opened previously ^
-        fputs("UserID: ", fp);
+        fputs(id_prefix, fp);
         fputs(customerID, fp);
         fputs("\n", fp);
+
+        fputs(status_prefix"ACTIVE", fp);
+        fputs("\n", fp);
             
-        fputs("User First Name: ", fp);
+        fputs(fname_prefix, fp);
         fputs(user_firstname, fp);
         fputs("\n", fp);
         
-        fputs("User Last Name: ", fp);
+        fputs(lname_prefix, fp);
         fputs(user_lastname, fp);
         fputs("\n", fp);
         fputs(data_breakpoint, fp);
@@ -2699,7 +2875,7 @@ void scanfpassword (char* string_input)
             }
             else
             {
-                printf("\nMAX password length exceeded. Preceding characters saved, following characters discarded");
+                printf("\nMAX password length (%d) exceeded. Preceding characters saved, following characters discarded",password_length);
                 break;
             }
         }
@@ -3019,21 +3195,25 @@ void audit_editcustomer(int audit_type, char * customerID)
         {
             fputs("Edit made to customer first name (by admin)\n", fp);
         }
-        else if (audit_type == 3) //Edit made to customer first name
+        else if (audit_type == 3) //Edit made to customer last name
         {
             fputs("Edit made to customer last name (by admin)\n", fp);
         }
-        else if (audit_type == 4) //Edit made to customer first name
+        else if (audit_type == 4)
         {
             fputs("Edit made to customer meter size (by admin)\n", fp);
         }
-        else if (audit_type == 5) //Edit made to customer first name
+        else if (audit_type == 5)
         {
             fputs("Edit made to customer meter reading (by admin)\n", fp);
         }
         else if(audit_type == 6)
         {
             fputs("Edit made to all customer fields (by admin)\n", fp);
+        }
+        else if(audit_type == 7)
+        {
+            fputs("Customer account archived (by admin)\n", fp);
         }
 
         //Format MONTH - DAY - YEAR
@@ -3059,4 +3239,69 @@ void audit_editcustomer(int audit_type, char * customerID)
     }
 
     fclose(fp); 
+}
+
+//18. Function defintion
+// 0 if user is Active
+// 1 if user is Archived
+// 2 if user could not be found
+int get_user_status(char* customerID_for_lookup)
+{
+    char str[max_e_length];
+    char strtemp[max_e_length];
+    int found_databreakpoint = 1;
+    int found_ID = 1; // Default to false
+    int user_status = 2;
+
+    FILE *fp;
+    fp = fopen(customerdatabase,"r");
+
+    if(fp != NULL)
+    {
+        while(fgets(str,max_e_length,fp) != NULL && found_databreakpoint != 0)
+        //While there's something to read in file,
+        {
+
+            if(strstr(str,customerID_for_lookup) != NULL)
+            {
+                found_ID = 0;
+            }
+            if(found_ID == 0 && found_databreakpoint != 0)
+            {
+                if(strstr(str,status_prefix)!=NULL)
+                {
+                    strcpy(strtemp,str);
+                    strsanitize(strtemp,0);
+                    remove_prefix(strtemp,status_prefix);
+
+                    if(strcmp(strtemp,"ACTIVE") == 0)
+                    {
+                        user_status = 0;
+                        fclose(fp);
+                        break;
+                    }
+                    else if (strcmp(strtemp,"ARCHIVED") == 0)
+                    {
+                        user_status = 1;
+                        fclose(fp);
+                        break;
+                    }
+                }
+            }
+            if(found_ID == 0 && strstr(str,data_breakpoint)!=NULL)
+            {
+                found_databreakpoint = 0;
+                break;
+            }
+        }
+    
+    }
+    else
+    {
+        printf(file_open_error);
+    }
+
+    fclose(fp);
+
+    return user_status;
 }
