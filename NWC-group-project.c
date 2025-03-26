@@ -59,6 +59,7 @@ Email "admin@gmail.com"
 #define metersize_prefix "Meter Size #"
 #define lastmeter_r_prefix "Last Meter Reading #"
 #define status_prefix "User Status: "
+#define income_class_prefix "Income Class: "
 
 //Initalizing variables
 char registered;
@@ -66,13 +67,12 @@ char data_to_check[max_length];
 char terminal;
 char clear_terminal[5 +1];
 char hashed_password[50];
-char tempID_hold[max_length] = {0};
 int delay_time = 2;
 float print_delay = .05;
 
 // set to 0 to see function outputs
 // set to 1 to not see function outputs
-int debug = 0;
+int debug = 1;
 int debug_scanfpassword = 1; //set to 0 if using linux terminal (wip)
 
 //Initializing file name/s
@@ -109,7 +109,7 @@ inputs are then checked across a database and a matched found**/
 // Returns 1 if login unsuccessful
 // Returns 0 if login successful
 // Returns 2 if login sucessful for admin account
-int user_login (char *email, char *password, char* tempID);
+int user_login (char *email, char *password, char* tempID, int* is_user_new);
 
 /**6. Function generates a random ID given length variable
 which determines how long the ID should be**/
@@ -170,7 +170,7 @@ int get_user_status(char* customerID_for_lookup);
 //Terminals
 void admin_terminal(char *terminal_clear_string);
 
-void customer_terminal(char *terminal_clear_string);
+void customer_terminal(char *terminal_clear_string, char* id_of_current_account, int is_user_new_account);
 
 
 /*******************************************************************/
@@ -184,11 +184,11 @@ enum meter_size
 
 enum income_class
 {
-    Low = 125, //(daily usage up to 125 L)
-    Low_Medium = 175, //(daily usage up to 175 L)
-    Medium = 220, //(daily usage up to 220 L)
-    Medium_High = 250, //(daily usage up to 250 L)
-    High = 300, //(daily usage up to 300 L)
+    /*Income class 1*/Low = 125, //(daily usage up to 125 L)
+    /*Income class 2*/Low_Medium = 175, //(daily usage up to 175 L)
+    /*Income class 3*/Medium = 220, //(daily usage up to 220 L)
+    /*Income class 4*/Medium_High = 250, //(daily usage up to 250 L)
+    /*Income class 5*/High = 300, //(daily usage up to 300 L)
 };
 
 struct audit
@@ -354,7 +354,7 @@ void main()
         system(clear_terminal); //Clears command line UI
 
         //Outputting header
-        printf(bold_start "\n---ACCOUNT REGISTRATION---\n\n" bold_end);
+        printf(bold_start"================== ACCOUNT REGISTRATION ==================\n\n"bold_end);
         
         
         printf(underline_start"Enter an email:\n"underline_end);
@@ -380,7 +380,7 @@ void main()
             
             while(duplicate_check(user.email,loginfile,email_prefix) != 2)
             {
-                printf("\n-Email already in use!-\n\n");
+                printf(bold_start"\n-Email already in use!-\n\n"bold_end);
                 printf(underline_start"Enter new email:\n"underline_end);
                 scanf("%s", user.email);
                 setall_lowercase(user.email);
@@ -433,13 +433,13 @@ void main()
 
             system(clear_terminal); //Clears command line UI
             
-            
-            printf(underline_start"Would you like to LOGIN? \n"underline_end"'Y' for yes\n'N' for no\n\n");
+            printf(bold_start"================== ACCOUNT CREATED ==================\n\n"bold_end);
+            printf(bold_start"Would you like to LOGIN? \n"bold_end"(Y) for yes\n(N) for no\n\n");
             scanf(" %c", &registered);
         }
         else
         {
-            printf("\n-Login database could not be accessed-");
+            printf(bold_start"\n-Login database could not be accessed-"bold_end);
         }
     }
 
@@ -449,6 +449,9 @@ void main()
     int i = 0;
     int attempt = 2;
     int total_attempts = 6;
+    int login_access = 1;
+    char tempID_hold[max_length] = {0};
+    int is_customer_new = 1; //Default to false
             
     if(registered == 'Y' || registered =='y')
     {
@@ -456,7 +459,7 @@ void main()
         system(clear_terminal); //Clears command line UI
 
         
-        printf(bold_start "---ACCOUNT LOGIN---\n\n" bold_end);
+        printf(bold_start"================== ACCOUNT LOGIN ==================\n\n"bold_end); //Outputting file header
         
         printf(underline_start"Enter your email:\n"underline_end);
         scanf(" %s", user.email);
@@ -477,12 +480,23 @@ void main()
             
          
         //Verification check for password and email
-        int login_access = user_login(user.email,user.password,tempID_hold);
+        //18. Function defintion
+        // 0 if user is Active
+        // 1 if user is Archived
+        // 2 if user could not be found
+        login_access = user_login(user.email,user.password,tempID_hold,&is_customer_new);
         
-        while (login_access != 0 && login_access != 2 && attempt < total_attempts)
+        // If user is archived then cancel successful login
+        if(get_user_status(tempID_hold) == 1)
+        {
+            login_access = 1;
+        }
+
+        while(login_access != 0 && login_access != 2 && attempt < total_attempts)
+        //While credentials given, dont link to a customer or user account AND account found isn't archived
         {
             system(clear_terminal); // Clears command line UI
-            printf(bold_start "\n---ACCOUNT LOGIN---\n" bold_end);
+            printf(bold_start"================== ACCOUNT LOGIN ==================\n\n"bold_end); //Outputting file header
             
             printf("\n-Email or Password is incorrect - ");
             printf("attempt #: %d - you have %d attempts left -\n",attempt,total_attempts-attempt);
@@ -505,8 +519,12 @@ void main()
             }
                 
             //Checking credentials over
-            login_access = user_login(user.email,user.password,tempID_hold);
+            login_access = user_login(user.email,user.password,tempID_hold,&is_customer_new);
 
+            if(get_user_status(tempID_hold) == 1)
+            {
+                login_access = 1;
+            }
             attempt++;
         }
 
@@ -527,11 +545,11 @@ void main()
             if(debug == 0)
             {
                 printf("login successful - customer ACCOUNT -\n");
-                printf("==================================\n\n");
+                printf(bold_start"===================================================\n\n"bold_end);
             }
             
             auditlogin(login_access,tempID_hold);
-            customer_terminal(clear_terminal); //Starts up customer terminal
+            customer_terminal(clear_terminal,tempID_hold,is_customer_new); //Starts up customer terminal
 
         }
         else if (login_access == 2)
@@ -539,10 +557,11 @@ void main()
             if(debug == 0)
             {
                 printf("\n\nlogin successful - admin ACCOUNT -\n\n"); 
-                printf("==================================\n\n");
+                printf(bold_start"===================================================\n\n"bold_end);
             }
 
             auditlogin(login_access,tempID_hold);
+            clear_stringarray(tempID_hold);
             admin_terminal(clear_terminal); //Starts up admin terminal
         }
         
@@ -564,11 +583,11 @@ void admin_terminal(char *terminal_clear_string)
     {
         char customerID[max_length];
         char status[max_length];
+        int incomeclass;
         char firstname[max_length];
         char lastname[max_length];
-        char email[max_length];
+        char email[max_length*2];
         char password[password_length + 1];
-        int income_class;
         
         //Basically, 1 customer can have up to 5 premises
         char premisesID[5][max_length];//Each record can be up to "max_length" long & can store 5 rows of data
@@ -599,8 +618,6 @@ void admin_terminal(char *terminal_clear_string)
 
     long int id_location;
 
-
-
     if(debug == 0)
     {
         printf("Program paused to give user chance to see debug\nEnter any character to continue:\n");
@@ -611,13 +628,15 @@ jump_admin_actions: ;
 
     system(terminal_clear_string); //Clears command line UI
 
-    printf(bold_start "\n---ADMIN TERMINAL---\n" bold_end);//Outputting header
+    //Outputting header
+    printf(bold_start"================== ADMIN TERMINAL ==================\n"bold_end);
+    
     
     printf(underline_start"\nEnter choice of action:\n"underline_end);
     printf("(1) - Add customer/s\n");
     printf("(2) - Edit customer/s\n");
     printf("(3) - View customer/s\n");
-    //printf("4 - Delete/Archive customer/s\n");
+    printf("(4) - Delete/Archive customer/s\n");
     //printf("5 - Generate Bill customer/s\n");
     //printf("6 - View reports\n");
     printf("(7) - View Audit Logs\n");
@@ -629,11 +648,11 @@ jump_admin_actions: ;
     switch(action)
     {
         case 1: // Add customer/s
-            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header           
+            printf(bold_start"================== CUSTOMER DATABASE DEMO ==================\n"bold_end); //Outputting file header           
             printf(id_prefix"\n");
             printf(fname_prefix"\n");
             printf(lname_prefix"\n");
-            printf("============================================================\n");
+            printf(bold_start"============================================================\n"bold_end);
 
             printf(underline_start"\nEnter customer ID ( 7 digits ): \n"underline_end);
             scanf(" %s", user.customerID);
@@ -657,33 +676,33 @@ jump_admin_actions: ;
 
             system(terminal_clear_string); // Clears command line UI
 
-            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header with user entered data     
+            printf(bold_start"================== CUSTOMER DATABASE DEMO ==================\n"bold_end); //Outputting file header with user entered data     
             printf(id_prefix"%s\n",user.customerID);
             printf(fname_prefix"\n");
             printf(lname_prefix"\n");
-            printf("============================================================\n");
+            printf(bold_start"============================================================\n"bold_end);
 
             printf(underline_start"\nEnter Customer First Name: \n"underline_end);
             scanf(" %s",user.firstname);
 
             system(terminal_clear_string); // Clears command line UI
             
-            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header with user entered data           
+            printf(bold_start"================== CUSTOMER DATABASE DEMO ==================\n"bold_end); //Outputting file header with user entered data           
             printf(id_prefix"%s\n",user.customerID);
             printf(fname_prefix"%s\n",user.firstname);
             printf(lname_prefix"\n");
-            printf("============================================================\n");
+            printf(bold_start"============================================================\n"bold_end);
 
             printf(underline_start"\nEnter Customer Last Name: \n"underline_end);
             scanf(" %s",user.lastname);
 
             system(terminal_clear_string); // Clears command line UI
 
-            printf("================== CUSTOMER DATABASE DEMO ==================\n"underline_end); //Outputting file header with user entered data               
+            printf(bold_start"================== CUSTOMER DATABASE DEMO ==================\n"bold_end); //Outputting file header with user entered data               
             printf(id_prefix"%s\n",user.customerID);
             printf(fname_prefix"%s\n",user.firstname);
             printf(lname_prefix"%s\n",user.lastname);
-            printf("============================================================\n\n");
+            printf(bold_start"============================================================\n\n"bold_end);
 
             printf(underline_start"How many Premises would you like to add (Max 5): \n"underline_end);
             scanf(" %d", &premisesamt);
@@ -697,8 +716,10 @@ jump_admin_actions: ;
             }
 
             //Gettings Premises details 
-            for(int i = 0; i < premisesamt; i++)
+            char temp_premisesID_hold[5][max_e_length] = {0}; // Variable used to store premises numbers already entered 
+            for(int i = 0; i < premisesamt; i++)        // and check to ensure current premises IDs  being entered, dont match past ones
             {
+                int redo_gettingID = 1; // Default to false
                 printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
                 scanf(" %s",strtemp);
 
@@ -710,39 +731,60 @@ jump_admin_actions: ;
                     scanf(" %s",strtemp);
                 }
 
-
                 //Ensuring no dupliciate Premises ID can be made
                 while(duplicate_check(strtemp,customerdatabase,premisesid_prefix) != 2)
                 {
-                    printf(bold_start"\n-Premises not Available-\n\n"bold_end);
+                    printf(bold_start"\n-Premises In Use-\n\n"bold_end);
                     printf(underline_start"Enter new Premises ID #%d: \n"underline_end,i+1);
                     scanf(" %s",strtemp);
                 }
-                strcpy(user.premisesID[i],strtemp);
 
-
-                printf(underline_start"\nEnter Meter size (150mm - 30mm - 15mm) #%d:\n"underline_end,i+1);
-                scanf("%d",&user.meter_size[i]);
-
-                //Ensuring user can only select one of 3 options available
-                //Meter size 1 - 150
-                //Meter size 2 - 30
-                //Meter size 3 - 15
-                while(user.meter_size[i] != meter1 && user.meter_size[i] != meter2 && user.meter_size[i] != meter3)
+                strcpy(temp_premisesID_hold[i],strtemp);
+                
+                if(i > 0) //If we're not entering our first premises
                 {
-                    printf(bold_start"\n-Invalid meter size-\n"bold_end);
-                    printf(underline_start"\nEnter VALID Meter size (150mm - 30mm - 15mm) #%d:\n"underline_end, i+1);
-                    scanf("%d",&user.meter_size[i]);
+                    for(int a = 0; a<premisesamt-1; a++)
+                    {
+                        if(strcmp(temp_premisesID_hold[a],strtemp) == 0) // If a matching premises is found
+                        {
+                            printf(bold_start"\nPremises ID already entered\n"bold_end);
+                            redo_gettingID = 0; //Set to true
+                            break;
+                        }
+                    }
                 }
+                if(redo_gettingID == 0)
+                {
+                    i--; //decrement i such that we can re-enter premises id which wouldve been stored at current index 
+                    continue;
+                }
+                else
+                {
+                    strcpy(user.premisesID[i],strtemp);
 
-                printf(underline_start"\nEnter Initial Meter Reading #%d:\n"underline_end,i+1);
-                scanf("%f",&user.meter_reading[i]);
+                    printf(underline_start"\nEnter Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
+                    scanf("%d",&user.meter_size[i]);
+
+                    //Ensuring user can only select one of 3 options available
+                    //Meter size 1 - 150
+                    //Meter size 2 - 30
+                    //Meter size 3 - 15
+                    while(user.meter_size[i] != meter1 && user.meter_size[i] != meter2 && user.meter_size[i] != meter3)
+                    {
+                        printf(bold_start"\n-Invalid meter size-\n"bold_end);
+                        printf(underline_start"\nEnter VALID Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
+                        scanf("%d",&user.meter_size[i]);
+                    }
+
+                    printf(underline_start"\nEnter Initial Meter Reading #%d:\n"underline_end,i+1);
+                    scanf(" %f",&user.meter_reading[i]);
+                }
 
             }
 
             system(terminal_clear_string); // Clears command line UI
 
-            printf("================== CUSTOMER DATABASE DEMO ==================\n"); //Outputting file header with user entered data              
+            printf(bold_start"================== CUSTOMER DATABASE DEMO ==================\n"bold_end); //Outputting file header with user entered data              
             printf(id_prefix"%s\n",user.customerID);
             printf(fname_prefix"%s\n",user.firstname);
             printf(lname_prefix"%s\n\n",user.lastname);
@@ -751,9 +793,17 @@ jump_admin_actions: ;
             {
                 printf("Premises ID #%d: %s\n",i+1, &user.premisesID[i][0]);
                 printf("Meter Size #%d: %d\n",i+1,user.meter_size[i]);
-                printf("Last Meter Reading #%d: %.2f\n",i+1, user.meter_reading[i]);
+                printf("Last Meter Reading #%d: %.2f",i+1, user.meter_reading[i]);
+                if(i == premisesamt-1)
+                {
+                    printf("\n");
+                }
+                else
+                {
+                    printf("\n\n");
+                }
             }
-            printf("============================================================\n");
+            printf(bold_start"============================================================\n"bold_end);
 
             printf(bold_start"\nConfirm Addition of customer to database? (Y) Yes OR (X) no\nYou will be taken back to admin actions menu after selection\n"bold_end);
             scanf(" %c", &send_back_variable);
@@ -762,12 +812,32 @@ jump_admin_actions: ;
             if(send_back_variable == 'Y' || send_back_variable == 'y')
             {
                 customerdbpointer = fopen(customerdatabase, "a");
+                loginpointer = fopen(loginfile, "a");
                 
-                if(customerdbpointer!=NULL)
+                //Adding customer to customer database
+                if(customerdbpointer != NULL)
                 {
+                    
                     //appends data passed to customer database
                     fputs(id_prefix, customerdbpointer);
                     fputs(user.customerID, customerdbpointer);
+                    fputs("\n", customerdbpointer);
+
+                    fputs(status_prefix, customerdbpointer);
+                    fputs("ACTIVE", customerdbpointer);
+                    fputs("\n", customerdbpointer);
+
+                    // generates maxium number, between max and min
+                    int random_number;
+                    int max = 5;
+                    int min = 1;
+                    srand(time(NULL));
+                    random_number = min + rand() % ((max - min) + 1); 
+                    clear_stringarray(strtemp);
+                    snprintf(strtemp,max_e_length,"%d",random_number); // converts right-most variable into string thats placed in left-most
+
+                    fputs(income_class_prefix, customerdbpointer);
+                    fputs(strtemp, customerdbpointer); // Puts random number as income class
                     fputs("\n", customerdbpointer);
                         
                     fputs(fname_prefix, customerdbpointer);
@@ -776,7 +846,14 @@ jump_admin_actions: ;
                     
                     fputs(lname_prefix, customerdbpointer);
                     fputs(user.lastname, customerdbpointer);
-                    fputs("\n\n", customerdbpointer);
+                    if(premisesamt > 0)
+                    {
+                        fputs("\n\n", customerdbpointer);
+                    }
+                    else
+                    {
+                        fputs("\n", customerdbpointer);
+                    }
                     
                     for(int i = 0; i < premisesamt; i++)
                     {
@@ -811,7 +888,7 @@ jump_admin_actions: ;
                     fputs(data_breakpoint, customerdbpointer);
                     fputs("\n\n", customerdbpointer);
 
-                    printf(bold_start"\n-Data Added Successfully-\n"bold_end);
+                    printf(bold_start"\n-Customer Added Successfully-\n"bold_end);
 
                     auditaddcustomer(1,user.customerID);
 
@@ -825,6 +902,40 @@ jump_admin_actions: ;
                     printf(file_open_error);
                 }
 
+                //Adding customer to login database
+                if(loginpointer != NULL )
+                {
+                    //appends data passed to login database
+                    fputs(id_prefix, loginpointer);
+                    fputs(user.customerID, loginpointer);
+                    fputs("\n", loginpointer);
+
+                    //Creates email as a combination of last name and customer ID
+                    snprintf(strtemp,max_e_length,"%s%s@gmail.com",user.lastname,user.customerID);
+                    strcpy(user.email,strtemp);
+                    setall_lowercase(user.email);
+                    fputs(email_prefix, loginpointer);
+                    fputs(user.email, loginpointer);
+                    fputs("\n", loginpointer);
+
+                    snprintf(strtemp,max_e_length,"%s@nzhi",user.customerID);
+                    hash_djb2(strtemp,user.password);
+                    fputs(password_prefix, loginpointer);
+                    fputs(user.password, loginpointer);
+                    fputs("\n", loginpointer);
+
+                    fputs(data_breakpoint, loginpointer);
+                    fputs("\n\n", loginpointer);
+
+                    fclose(loginpointer);
+                }
+                else
+                { 
+                    printf(file_open_error);
+                }
+
+                printf("\nWhen you're done enter X:\n");
+                scanf(" %c", &send_back_variable);
                 if(send_back_variable == 'X' || send_back_variable == 'x')
                 {
                     goto jump_admin_actions; // Jumps code back to specified point if logic returns true
@@ -839,15 +950,16 @@ jump_admin_actions: ;
             
         case 2: // Edit customer/s     
 
-            //These long unsigned integers, will be used to store where their respective data in the txt file is found.
+            //These long unsigned integers, will be used to store where their respective data in the txt file is found (as line numbers).
             long unsigned email_location = 0;
             long unsigned fname_location = 0;
             long unsigned lname_location = 0;
             long unsigned user_status_location = 0;
+            long unsigned income_class_location = 0;
             long unsigned premisesID_location[5];
-            int meter_size_location[5] = {0};
-            int last_meter_r_location[5] = {0};
-            int current_line;
+            long unsigned meter_size_location[5] = {0};
+            long unsigned last_meter_r_location[5] = {0};
+            long unsigned current_line;
             int user_has_email = 1; //1 for false - 0 for true
             int fault_check;
             premisesamt = 0; // Clear any value stored from previous actions
@@ -856,21 +968,24 @@ jump_admin_actions: ;
             fflush(stdin);
             scanf(" %s", user.customerID);
 
-            while(duplicate_check(user.customerID,customerdatabase,id_prefix) == 2)
+            while(duplicate_check(user.customerID,customerdatabase,id_prefix) == 2 || get_user_status(user.customerID) != 0)
             //while duplicate data not found (information provided dosent exist in file checked)
             // do:
             {
-                printf(bold_start"\n-No such ID exists-\n\n"bold_end);
-                printf(underline_start"Enter ID of customer you'd like to Edit:\n"underline_end);
-                fflush(stdin);
-                scanf(" %s", user.customerID);
-            }
-
-            while(get_user_status(user.customerID) != 0)
-            //Checks if customer account is archived
-            {
-                printf(bold_start"\n-This customer account is archived-\n\n"bold_end);
-                printf(underline_start"Enter ID of ACTIVE customer you'd like to Edit:\n"underline_end);
+                if(duplicate_check(user.customerID,customerdatabase,id_prefix) == 2)
+                {
+                    printf(bold_start"\n-No Such Customer Exists-\n\n"bold_end);
+                }
+                else if(get_user_status(user.customerID) != 0)
+                {
+                    printf(bold_start"\n-This customer account is archived-\n\n"bold_end);
+                    printf(underline_start"Enter ID of ACTIVE customer you'd like to Edit:\n"underline_end);
+                    fflush(stdin);
+                    scanf(" %s", user.customerID);
+                    continue;
+                }
+                
+                printf(underline_start"Enter VALID ID of customer you'd like to Edit:\n"underline_end);
                 fflush(stdin);
                 scanf(" %s", user.customerID);
             }
@@ -888,7 +1003,7 @@ jump_admin_actions: ;
                 system(terminal_clear_string); // Clears command line UI
 
                 //Printing & Saving User data selected
-                printf("================== CUSTOMER DATABASE ==================\n\n"); //Outputting file header
+                printf(bold_start"================== CUSTOMER DATABASE ==================\n\n"bold_end); //Outputting file header
                 
                 //Getting user Data
                 current_line = 1;
@@ -952,6 +1067,15 @@ jump_admin_actions: ;
                     {
                         strcpy(user.status,str);
                         user_status_location = current_line;
+                    }
+                    //Getting account status
+                    else if(found_ID == 0 && strstr(str,income_class_prefix) != NULL)
+                    {
+                        clear_stringarray(strtemp);
+                        strcpy(strtemp,str);
+                        remove_prefix(strtemp,income_class_prefix);
+                        user.incomeclass = atoi(strtemp); // converts income class from str to int
+                        income_class_location = current_line;
                     }
 
 
@@ -1044,7 +1168,8 @@ jump_admin_actions: ;
                 strsanitize(user.status,0);
 
                 ///Outputting current user data
-                printf(text_red_start"UserID: %s\n"text_color_end,user.customerID);
+                printf(text_red_start id_prefix"%s\n"text_color_end,user.customerID);
+                printf(income_class_prefix"%d\n",user.incomeclass);
 
                 if(strlen(user.email)>11) // Email match was found
                 {
@@ -1082,7 +1207,14 @@ jump_admin_actions: ;
                     }
                 }
 
-                printf("\n=======================================================\n");
+                printf(bold_start"\n=======================================================\n"bold_end);
+                printf(underline_start"INCOME CLASS\n"underline_end);
+                printf("1 - Low: daily usage of up to %d litres\n",Low);
+                printf("2 - Low Medium: daily usage of up to %d litres\n",Low_Medium);
+                printf("3 - Medium: daily usage of up to %d litres\n",Medium);
+                printf("4 - Medium High: daily usage of up to %d litres\n",Medium_High);
+                printf("5 - High: daily usage of up to %d litres\n",High);
+                printf("=======================================================\n\n");
 
                 if(debug == 0)
                 {
@@ -1090,7 +1222,11 @@ jump_admin_actions: ;
                     printf("UserID (from user): %s\n",user.customerID);
                     printf("UserID strlen: %lu\n",strlen(user.customerID));
 
-                    printf("User Status location: %lu\n",user_status_location);
+                    printf("User Status: %s\n",user.status);
+                    printf("User Status location: %lu\n\n",user_status_location);
+
+                    printf("User Income Class: %d\n",user.incomeclass);
+                    printf("User Income Class location: %lu\n",income_class_location);
 
                     if(strlen(user.email)>11) // Email match was found
                     {
@@ -1143,9 +1279,9 @@ jump_admin_actions: ;
                             printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
                             printf("Location line #: %lu\n",premisesID_location[i]);
                             printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
-                            printf("Location line #: %d\n",meter_size_location[i]);
+                            printf("Location line #: %lu\n",meter_size_location[i]);
                             printf(lastmeter_r_prefix"%d: %.2f\n",i+1, user.meter_reading[i]); 
-                            printf("Location line #: %d",last_meter_r_location[i]);
+                            printf("Location line #: %lu",last_meter_r_location[i]);
                                 
                             //Prevents double line space at the end of user record
                             if(i != premisesamt-1)
@@ -1164,19 +1300,19 @@ jump_admin_actions: ;
                 printf(underline_start"\nWhat would you like to edit? (text in "text_red_start"red, CANNOT"text_color_end underline_start" be edited):\n"underline_end);
                 if(user_has_email != 1 && premisesamt > 0) // If user has email linked to ID/account and they own premises, do:
                 {
-                    printf("(1) - Email\n(2) - First Name\n(3) - Last name\n(4) - Meter Size\n(5) - Meter Reading\n(6) - All Fields\n(7) - Archive Account\n");
+                    printf("(1) - Income Class\n(2) - Email\n(3) - First Name\n(4) - Last name\n(5) - Meter Size\n(6) - Meter Reading\n(7) - All Fields\n");
                 }
                 else if(user_has_email == 1 && premisesamt > 0) //Has no email but has premises
                 {
-                    printf(text_red_start"(1) - Email"text_color_end"\n(2) - First Name\n(3) - Last name\n(4) - Meter Size\n(5) - Meter Reading\n(6) - All Fields\n(7) - Archive Account\n");
+                    printf("(1) - Income Class\n"text_red_start"(2) - Email - customer has no login account"text_color_end"\n(3) - First Name\n(4) - Last name\n(5) - Meter Size\n(6) - Meter Reading\n(7) - All Fields\n");
                 }
                 else if (user_has_email != 1 && premisesamt == 0) //Has email but no premises
                 {
-                    printf("(1) - Email\n(2) - First Name\n(3) - Last name\n(4) - All Fields\n(5) - Archive Account\n");
+                    printf("(1) - Income Class\n(2) - Email\n(3) - First Name\n(4) - Last name\n(5) - All Fields\n");
                 }
                 else if (user_has_email == 1 && premisesamt == 0) //Has no email and no premises
                 {
-                    printf(text_red_start"(1) - Email"text_color_end"\n(2) - First Name\n(3) - Last name\n(4) - All Fields\n(5) - Archive Account\n");
+                    printf("(1) - Income Class\n"text_red_start"(2) - Email - customer has no login account"text_color_end"\n(3) - First Name\n(4) - Last name\n(5) - All Fields\n");
                 }
                 
                 
@@ -1196,9 +1332,108 @@ jump_admin_actions: ;
                 {
                     goto jump_admin_actions; // Jumps code back to specified point if logic returns true
                 }
+
+                //CHANGING INCOME CLASS
+                else if (choice == 1)
+                {
+                    //Getting new name
+                    printf(underline_start"\nEnter new income class (1 - 5):\n"underline_end);
+                    scanf(" %d",&user.incomeclass);
+
+                    while(user.incomeclass != 1 && user.incomeclass != 2 && user.incomeclass != 3 && user.incomeclass != 4 && user.incomeclass != 5)
+                    {
+                        printf(bold_start"\n-income class invalid-\n"bold_end);
+                        printf(underline_start"\nEnter valid new income class (1 - 5):\n"underline_end);
+                        scanf(" %d",&user.incomeclass);
+                    }
+
+                    clear_stringarray(strtemp);
+                    clear_stringarray(filename_temp);
+
+                    printf(bold_start"\nConfirm edit request for customer (%s) ? (Y) Yes OR (X) no\nYou will be taken back to admin actions menu after selection\n"bold_end,user.customerID);
+                    scanf(" %1c", &send_back_variable);
+
+                    if(send_back_variable == 'Y' || send_back_variable == 'y')
+                    {
+                        //Creating temporary file to make edits
+                        strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
+                    
+                        int a = 0;
+                        for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
+                        {
+                            if(a<2)
+                            {
+                                filename_temp[strlen(filename_temp)-(b+a)] = '\0';
+                                a++;            
+                            }
+                    
+                        }
+                        strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
+                        strcat(filename_temp,".txt"); // Adds back .txt to file name
+                    
+                        temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
+                        //Temporary file now created
+                    
+                        fseek(customerdbpointer,0,SEEK_SET); //Resests pointer to start of file
+                        
+                        if(temp_pointer != NULL && customerdbpointer != NULL) // If both files open successfully
+                        //do:
+                        {
+                            current_line = 1;
+                            while(fgets(str,max_e_length,customerdbpointer)!=NULL)
+                            {
+                                if(current_line == income_class_location)
+                                {
+                                    snprintf(strtemp,max_e_length,income_class_prefix"%d\n",user.incomeclass);
+                                    fputs(strtemp,temp_pointer);
+                                }
+                                else
+                                {
+                                    fputs(str,temp_pointer);
+                                }
+                                current_line++;
+                            }
+                        
+                            fclose(customerdbpointer);
+                            fclose(temp_pointer);
+                            clear_stringarray(str);
+                            clear_stringarray(strtemp);
+                    
+                            if(remove(customerdatabase) != 0)
+                            {
+                                if(debug == 0)
+                                {
+                                    perror("\nError msg");
+                                    printf(bold_start"\n-Failed to Remove File-\n"bold_end);
+                                }
+                            }  
+                            else if(rename(filename_temp,customerdatabase) != 0)
+                            {
+                                if(debug == 0)
+                                {
+                                    perror("\nError msg");
+                                    printf(bold_start"\n-Failed to Replace File-\n"bold_end);
+                                }
+                            }
+                            else
+                            {
+                                printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
+                                audit_editcustomer(1,user.customerID);
+                            }
+                        }
+                        else
+                        {
+                            printf(file_open_error);
+                        }
+                    }
+                    else if(send_back_variable == 'X' || send_back_variable == 'x')
+                    {
+                        goto jump_admin_actions; // Jumps code back to specified point if logic returns true
+                    }
+                }                
                 
                 //CHANGING EMAIL
-                else if(choice == 1)
+                else if(choice == 2)
                 {
                     if(user_has_email != 1)
                     {
@@ -1305,7 +1540,7 @@ jump_admin_actions: ;
                                 else
                                 {
                                     printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                    audit_editcustomer(1,user.customerID);
+                                    audit_editcustomer(2,user.customerID);
                                 }
                             }
                             else
@@ -1327,7 +1562,7 @@ jump_admin_actions: ;
                 }
 
                 //CHANGING FIRST NAME
-                else if (choice == 2)
+                else if (choice == 3)
                 {
                     //Getting new name
                     printf(underline_start"\nEnter new first name:\n"underline_end);
@@ -1404,7 +1639,7 @@ jump_admin_actions: ;
                             else
                             {
                                 printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                audit_editcustomer(2,user.customerID);
+                                audit_editcustomer(3,user.customerID);
                             }
                         }
                         else
@@ -1419,7 +1654,7 @@ jump_admin_actions: ;
                 }
 
                 //CHANGING LAST NAME
-                else if (choice == 3)
+                else if (choice == 4)
                 {
                     //Getting new name
                     printf(underline_start"\nEnter new last name:\n"underline_end);
@@ -1496,7 +1731,7 @@ jump_admin_actions: ;
                             else
                             {
                                 printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                audit_editcustomer(3,user.customerID);
+                                audit_editcustomer(4,user.customerID);
                             }
                         }
                         else
@@ -1511,7 +1746,7 @@ jump_admin_actions: ;
                 }
 
                 //CHANGING METER SIZE
-                else if (premisesamt > 0 && choice == 4)
+                else if (premisesamt > 0 && choice == 5)
                 {
                     i = 0;
                     printf(underline_start"\nWhat meter # would you like to change?\n"underline_end);
@@ -1525,7 +1760,7 @@ jump_admin_actions: ;
                         scanf("%1d",&choice);
                     }
 
-                    printf(underline_start"\nEnter New Meter size (150mm - 30mm - 15mm) #%d:\n"underline_end,choice);
+                    printf(underline_start"\nEnter New Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,choice);
                     scanf("%3d",&user.meter_size[i]);
     
                     //Ensuring user can only select one of 3 options available
@@ -1535,7 +1770,7 @@ jump_admin_actions: ;
                     while(user.meter_size[i] != meter1 && user.meter_size[i] != meter2 && user.meter_size[i] != meter3)
                     {
                         printf(bold_start"\n-Invalid meter size-\n"bold_end);
-                        printf(underline_start"\nEnter VALID Meter size (150mm - 30mm - 15mm) #%d:\n"underline_end, i+1);
+                        printf(underline_start"\nEnter VALID Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
                         scanf("%3d",&user.meter_size[i]);
                     }
 
@@ -1610,7 +1845,7 @@ jump_admin_actions: ;
                             else
                             {
                                 printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                audit_editcustomer(4,user.customerID);
+                                audit_editcustomer(5,user.customerID);
                             }
                         }
                     }
@@ -1622,7 +1857,7 @@ jump_admin_actions: ;
                 }
 
                 //CHANGING METER READING
-                else if (premisesamt > 0 && choice == 5)
+                else if (premisesamt > 0 && choice == 6)
                 {
                     i = 0;
                     printf(underline_start"\nWhat meter reading # would you like to change?\n"underline_end);
@@ -1712,7 +1947,7 @@ jump_admin_actions: ;
                             else
                             {
                                 printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                audit_editcustomer(5,user.customerID);
+                                audit_editcustomer(6,user.customerID);
                             }
                         }
                     }
@@ -1724,7 +1959,7 @@ jump_admin_actions: ;
                 }
 
                 //CHANGING ALL FIELDS
-                else if (premisesamt > 0 && choice == 6 || premisesamt == 0 && choice == 4)
+                else if (premisesamt > 0 && choice == 7 || premisesamt == 0 && choice == 5)
                 {
                     //Getting updated customer data
                     if(1)
@@ -1778,7 +2013,7 @@ jump_admin_actions: ;
                         //Getting new meter size & reading
                         for(int i = 0; i<premisesamt; i++)
                         {
-                            printf(underline_start"\nEnter New Meter size (150mm - 30mm - 15mm) #%d:\n"underline_end,i+1);
+                            printf(underline_start"\nEnter New Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
                             scanf("%d",&user.meter_size[i]);
             
                             //Ensuring user can only select one of 3 options available
@@ -1788,7 +2023,7 @@ jump_admin_actions: ;
                             while(user.meter_size[i] != meter1 && user.meter_size[i] != meter2 && user.meter_size[i] != meter3)
                             {
                                 printf(bold_start"\n-Invalid meter size-\n"bold_end);
-                                printf(underline_start"\nEnter VALID Meter size (150mm - 30mm - 15mm) #%d:\n"underline_end, i+1);
+                                printf(underline_start"\nEnter VALID Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
                                 scanf("%d",&user.meter_size[i]);
                             }
 
@@ -1918,7 +2153,7 @@ jump_admin_actions: ;
                                 }
                                 else
                                 {
-                                    printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
+                                    printf(bold_start"\n-Records Modified Successfully-\n"bold_end);
                                 }
                                 
                             }   
@@ -1968,8 +2203,8 @@ jump_admin_actions: ;
 
                                 for(i = 0; i < premisesamt; i++)
                                 {
-                                    printf("\nMeter size %d line #: %d\n",i+1,meter_size_location[i]);
-                                    printf("Last Meter Reading %d line #: %d",i+1,last_meter_r_location[i]);
+                                    printf("\nMeter size %d line #: %lu\n",i+1,meter_size_location[i]);
+                                    printf("Last Meter Reading %d line #: %lu",i+1,last_meter_r_location[i]);
                                 }
                                 printf("\n==================================\n\n");
                             }
@@ -2048,134 +2283,13 @@ jump_admin_actions: ;
                                 if(user_has_email != 0)
                                 {
                                     printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                    audit_editcustomer(6,user.customerID);
+                                    audit_editcustomer(7,user.customerID);
                                 }
                             }
 
                         }
                     }
                     else if (send_back_variable == 'X' || send_back_variable == 'x')
-                    {
-                        goto jump_admin_actions; // Jumps code back to specified point if logic returns true
-                    }
-                }
-            
-                //CHANGING CUSTOMER STATUS
-                else if (premisesamt > 0 && choice == 7 || premisesamt == 0 && choice == 5)
-                {
-                    int login_access;
-                    clear_stringarray(strtemp);
-                    clear_stringarray(filename_temp);
-
-                    printf(bold_start"\nConfirm deactivation request for customer (%s) ? (Y) Yes OR (X) no\nYou will be taken back to admin actions menu after selection\n"text_red_start"THIS ACTION CANNOT BE UNDONE\n"text_color_end bold_end,user.customerID);
-                    scanf(" %1c", &send_back_variable);
-
-                    if(send_back_variable == 'Y' || send_back_variable == 'y')
-                    {
-                        printf(bold_start"\nEnter Admin Credentials to Proceed with action\n"bold_end);
-                        printf(underline_start"\nEnter Email\n"underline_end);
-                        scanf(" %s",user.email);
-
-                        printf(underline_start"\nEnter Password\n"underline_end);
-                        fflush(stdin);
-                        if(terminal == 'L' || terminal == 'l')
-                        {
-                            scanf(" %s",user.password);
-                        }
-                        else if(terminal == 'W' || terminal == 'w')
-                        {
-                           scanfpassword(user.password); 
-                        }
-                        
-                        login_access = user_login(user.email,user.password,strtemp);
-
-                        if(debug == 1)
-                        {
-                            printf("\nLogin access check: %d\n",login_access);
-                        }
-
-                        if(login_access == 2)
-                        {
-                            clear_stringarray(filename_temp);
-                            clear_stringarray(str);
-                            
-                            //Creating temporary file to make edits
-                            strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
-                            
-                            int a = 0;
-                            for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
-                            {
-                                if(a<2)
-                                {
-                                    filename_temp[strlen(filename_temp)-(b+a)] = '\0';
-                                    a++;            
-                                }
-                        
-                            }
-                            strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
-                            strcat(filename_temp,".txt"); // Adds back .txt to file name
-                        
-                            temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
-                            //Temporary file now created
-                        
-                            fseek(customerdbpointer,0,SEEK_SET); //Resests pointer to start of file
-                            
-                            if(temp_pointer != NULL && customerdbpointer != NULL) // If both files open successfully
-                            //do:
-                            {
-                                current_line = 1;
-                                while(fgets(str,max_e_length,customerdbpointer)!=NULL)
-                                {
-                                    if(current_line == user_status_location)
-                                    {
-                                        snprintf(strtemp,max_e_length,status_prefix"ARCHIVED\n");
-                                        fputs(strtemp,temp_pointer);
-                                    }
-                                    else
-                                    {
-                                        fputs(str,temp_pointer);
-                                    }
-                                    current_line++;
-                                }
-                            
-                                fclose(customerdbpointer);
-                                fclose(temp_pointer);
-                                clear_stringarray(str);
-                                clear_stringarray(strtemp);
-                        
-                                if(remove(customerdatabase) != 0)
-                                {
-                                    if(debug == 0)
-                                    {
-                                        perror("\nError msg");
-                                        printf(bold_start"\n-Failed to Remove File-\n"bold_end);
-                                    }
-                                }  
-                                else if(rename(filename_temp,customerdatabase) != 0)
-                                {
-                                    if(debug == 0)
-                                    {
-                                        perror("\nError msg");
-                                        printf(bold_start"\n-Failed to Replace File-\n"bold_end);
-                                    }
-                                }
-                                else
-                                {
-                                    printf(bold_start"\n-Record Modified Successfully-\n"bold_end);
-                                    audit_editcustomer(7,user.customerID);
-                                }
-                            }
-                            else
-                            {
-                                printf(file_open_error);
-                            }
-                        }
-                        else
-                        {
-                            printf(bold_start"\nINVALID CREDENTIALS - Customer status change aborted\n"bold_end);
-                        }
-                    }
-                    else if(send_back_variable == 'X' || send_back_variable == 'x')
                     {
                         goto jump_admin_actions; // Jumps code back to specified point if logic returns true
                     }
@@ -2219,7 +2333,7 @@ jump_admin_actions: ;
                 {
                     system(terminal_clear_string); //Clears command line UI
                     
-                    printf("================== CUSTOMER DATABASE =================="); //Outputting file header
+                    printf(bold_start"================== CUSTOMER DATABASE =================="bold_end); //Outputting file header
 
 
                     while(fgets(str, max_e_length,customerdbpointer) != NULL)
@@ -2242,7 +2356,7 @@ jump_admin_actions: ;
                         }
                         else
                         {
-                            printf("\n=======================================================\n");
+                            printf(bold_start"\n=======================================================\n"bold_end);
                         }
                     }
 
@@ -2269,7 +2383,7 @@ jump_admin_actions: ;
                     //while duplicate data not found (information provided dosent exist in file checked)
                     // do:
                     {
-                        printf("\n-No such ID exists-\n\n");
+                        printf("\n-No Such Customer Exists-\n\n");
                         printf(underline_start"Enter new ID to lookup:\n"underline_end);
                         scanf(" %s", user.customerID);
                         strsanitize(user.customerID,0);
@@ -2277,7 +2391,7 @@ jump_admin_actions: ;
                     
                     system(terminal_clear_string); // Clears command line UI
                     
-                    printf("================== CUSTOMER DATABASE ==================\n\n"); //Outputting file header
+                    printf(bold_start"================== CUSTOMER DATABASE ==================\n\n"bold_end); //Outputting file header
                     
                     loginpointer = fopen(loginfile,"r");
                     
@@ -2352,15 +2466,22 @@ jump_admin_actions: ;
                         
                     }
                     
-                    printf("\n=======================================================\n");
-                    printf(bold_start"PREMISES OWNED %d\n"bold_end,premisesamt);
-                    printf("=======================================================\n\n");
+                    printf(bold_start"\n=======================================================\n"bold_end);
+                    printf(underline_start"PREMISES OWNED %d\n"underline_end,premisesamt);
+                    printf(bold_start"=======================================================\n"bold_end);
+                    printf(underline_start"INCOME CLASS\n"underline_end);
+                    printf("1 - Low: daily usage of up to %d litres\n",Low);
+                    printf("2 - Low Medium: daily usage of up to %d litres\n",Low_Medium);
+                    printf("3 - Medium: daily usage of up to %d litres\n",Medium);
+                    printf("4 - Medium High: daily usage of up to %d litres\n",Medium_High);
+                    printf("5 - High: daily usage of up to %d litres\n",High);
+                    printf(bold_start"=======================================================\n"bold_end);
                     
                 }
 
                 if(debug == 0)
                 {           
-                    printf("=========== DEBUG DATA ===========");
+                    printf(bold_start"=========== DEBUG DATA ==========="bold_end);
                     
                     printf("\ndata_breakpoint char: %s\n\n", data_breakpoint);
                     
@@ -2394,7 +2515,7 @@ jump_admin_actions: ;
                     {
                         printf("Found Breakpoint: FALSE\n");
                     }       
-                    printf("==================================\n\n");
+                    printf(bold_start"==================================\n\n"bold_end);
                 }
 
                 fclose(loginpointer);
@@ -2416,7 +2537,203 @@ jump_admin_actions: ;
             
             break;
         case 4: // Delete/Archive customer/s
-            //Code here
+            system(terminal_clear_string);
+            customerdbpointer = fopen(customerdatabase, "r"); // Attempts to open file in reading mode (r)
+        
+            printf(bold_start"================== CUSTOMER DELETION/ARCHIVING ==================\n\n"bold_end); //Outputting file header
+            printf(underline_start"Enter ID of customer to be deleted\n"underline_end);
+            printf(text_red_start"NOTE: THIS CANNOT BE UNDONE\n"text_color_end);
+            fflush(stdin);
+            scanf(" %s",user.customerID);
+            printf(bold_start"\n=================================================================\n"bold_end);
+
+
+            //Checking if ID provided exists and isnt archived already
+            while(duplicate_check(user.customerID,customerdatabase,id_prefix) == 2 || get_user_status(user.customerID) != 0)
+            //while duplicate data not found (information provided dosent exist in file checked)
+            // do:
+            {
+                if(duplicate_check(user.customerID,customerdatabase,id_prefix) == 2)
+                {
+                    printf(bold_start"\n-No Such Customer Exists-\n\n"bold_end);
+                }
+                else if (get_user_status(user.customerID) != 0)
+                {
+                    printf(bold_start"\n-Customer Is Already Archived-\n\n"bold_end);
+                }
+                
+                printf(underline_start"Enter new ID to lookup:\n"underline_end);
+                scanf(" %s", user.customerID);
+                strsanitize(user.customerID,0);
+            } 
+
+            system(terminal_clear_string);
+
+            printf(bold_start"================== CUSTOMER DELETION/ARCHIVING ==================\n\n"bold_end); //Outputting file header
+
+
+            //GETTING USER DATA
+            found_breakpoint = 1; //Setting found breakpoint ";" back to false
+            found_ID = 1; //Setting found ID back to false
+            
+            current_line = 1;
+            while(fgets(str,max_e_length,customerdbpointer) != NULL && found_breakpoint != 0)
+            {
+                if(strstr(str,user.customerID)!=NULL) //If id is found
+                {
+                    found_ID = 0;
+                }
+
+                if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
+                {
+                    found_breakpoint = 0;   
+                    break;
+                }
+
+                if(found_ID == 0 && found_breakpoint != 0)
+                {
+                    printf("%s",str);
+                }
+
+                //Getting account status
+                if(found_ID == 0 && strstr(str,status_prefix) != NULL)
+                {
+                    remove_prefix(str,status_prefix);
+                    strcpy(user.status,str);
+                    user_status_location = current_line;
+                }
+                current_line++;
+            }
+
+            printf(bold_start"\n=================================================================\n"bold_end);
+            //CHANGING CUSTOMER STATUS
+            int login_access;
+            int is_customer_new;
+            clear_stringarray(strtemp);
+            clear_stringarray(filename_temp);
+
+            printf(bold_start"\nConfirm deactivation request for customer (%s) ? (Y) Yes OR (X) no\nYou will be taken back to admin actions menu after selection\n"text_red_start"THIS ACTION CANNOT BE UNDONE\n"text_color_end bold_end,user.customerID);
+            scanf(" %1c", &send_back_variable);
+
+            if(send_back_variable == 'Y' || send_back_variable == 'y')
+            {
+                system(terminal_clear_string);
+
+                printf(bold_start"================== CUSTOMER DELETION/ARCHIVING ==================\n"bold_end); //Outputting file header
+                
+                printf(bold_start"\nEnter Admin Credentials to Proceed with action\n"bold_end);
+                printf(underline_start"\nEnter Email\n"underline_end);
+                scanf(" %s",user.email);
+
+                printf(underline_start"\nEnter Password\n"underline_end);
+                fflush(stdin);
+                if(terminal == 'L' || terminal == 'l')
+                {
+                    scanf(" %s",user.password);
+                }
+                else if(terminal == 'W' || terminal == 'w')
+                {
+                   scanfpassword(user.password); 
+                }
+                        
+                login_access = user_login(user.email,user.password,strtemp,&is_customer_new);
+
+                if(login_access == 2) //If admin login successful, archive user.
+                {
+                    clear_stringarray(filename_temp);
+                    clear_stringarray(str);
+                
+                    //Creating temporary file to make edits
+                    strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
+                    
+                    int a = 0;
+                    for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
+                    {
+                        if(a<2)
+                        {
+                            filename_temp[strlen(filename_temp)-(b+a)] = '\0';
+                            a++;            
+                        }
+                        
+                    }
+
+                    strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
+                    strcat(filename_temp,".txt"); // Adds back .txt to file name
+                        
+                    temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
+                    //Temporary file now created
+                        
+                    fseek(customerdbpointer,0,SEEK_SET); //Resests pointer to start of file
+                            
+                    if(temp_pointer != NULL && customerdbpointer != NULL) // If both files open successfully
+                    //do:
+                    {
+                        current_line = 1;
+                        while(fgets(str,max_e_length,customerdbpointer)!=NULL)
+                        {
+                            if(current_line == user_status_location)
+                            {
+                                snprintf(strtemp,max_e_length,status_prefix"ARCHIVED\n");
+                                fputs(strtemp,temp_pointer);
+                            }
+                            else
+                            {
+                                fputs(str,temp_pointer);
+                            }
+                            current_line++;
+                        }
+                            
+                        fclose(customerdbpointer);
+                        fclose(temp_pointer);
+                        clear_stringarray(str);
+                        clear_stringarray(strtemp);
+                        
+                        if(remove(customerdatabase) != 0)
+                        {
+                            if(debug == 0)
+                            {
+                                perror("\nError msg");
+                                printf(bold_start"\n-Failed to Remove File-\n"bold_end);
+                            }
+                        }  
+                        else if(rename(filename_temp,customerdatabase) != 0)
+                        {
+                            if(debug == 0)
+                            {
+                                perror("\nError msg");
+                                printf(bold_start"\n-Failed to Replace File-\n"bold_end);
+                            }
+                        }
+                        else
+                        {
+                            printf(bold_start"\n-Customer Archived-\n"bold_end);
+                            audit_editcustomer(8,user.customerID);
+                        }
+                    }
+                    else
+                    {
+                        printf(file_open_error);
+                    }
+                }
+                else
+                {
+                    printf(bold_start"\nINVALID CREDENTIALS - Customer status change aborted\n"bold_end);
+                }
+                printf(bold_start"\n=================================================================\n"bold_end);
+                
+                printf("When you're done enter X:\n");
+                scanf(" %c", &send_back_variable);
+                
+                if(send_back_variable == 'X' || send_back_variable == 'x')
+                {
+                    goto jump_admin_actions; // Jumps code back to specified point if logic returns true
+                }
+            }
+            else if(send_back_variable == 'X' || send_back_variable == 'x')
+            {
+                goto jump_admin_actions; // Jumps code back to specified point if logic returns true
+            }
+
             break;
         case 5: // Generate Bill customer/s
             //Code here
@@ -2431,7 +2748,7 @@ jump_admin_actions: ;
 
             fseek(auditpointer,strlen("AUDIT LOGS"),SEEK_SET); //Setting file pointer past header to save a small amount of time
                     
-            printf("================== AUDIT LOGS =================="); //Outputting file header
+            printf(bold_start"================== AUDIT LOGS =================="bold_end); //Outputting file header
 
             while(fgets(str, max_e_length,auditpointer) != NULL)
             //Explanation: while fgets isnt at the end of the file, do:
@@ -2445,15 +2762,15 @@ jump_admin_actions: ;
                 }
                 else
                 {
-                    printf("\n================================================\n");
+                    printf(bold_start"\n================================================\n"bold_end);
                 }
             }
                 
             if(debug == 0)
             {
-                printf("=========== DEBUG DATA ===========\n");
+                printf(bold_start"=========== DEBUG DATA ===========\n"bold_end);
                 printf("data_breakpoint test: %s\n\n", data_breakpoint);
-                printf("==================================\n\n");
+                printf(bold_start"==================================\n\n"bold_end);
             }
                 
             printf("When you're done enter X:\n");
@@ -2468,10 +2785,7 @@ jump_admin_actions: ;
             break;
 
         case 8: // Close terminal
-        
             close_console(delay_time,print_delay);
-            fclose(auditpointer);
-
             break;
     }
 
@@ -2479,15 +2793,493 @@ jump_admin_actions: ;
 
 /************************* CUSTOMER TERMINAL  **********************/
 
-void customer_terminal(char *terminal_clear_string)
+void customer_terminal(char *terminal_clear_string, char* id_of_current_account, int is_user_new_account)
 {
-    char close;
+
+    
+    //Structure for all customer data
+    typedef struct 
+    {
+        // General Info
+        char customerID[max_length];
+        char status[max_e_length];
+        int incomeclass;
+        char firstname[max_length];
+        char lastname[max_length];
+        char email[max_length];
+        char password[password_length + 1];
+
+        // Premises info
+        char premisesID[5][max_length];// Each record can be up to "max_length" long & can store 5 rows of data
+        float meter_reading[5];
+        int meter_size[5];
+
+        // Card info
+        char card_number[3][max_length]; // Customer can have up to 3 cards
+        int cvv;
+        struct
+        {
+            int month;
+            int year;
+        }card_date;
+        
+    } customer;
+
+    customer user; // Declare struct variabile
+
+    int action;
+    int found_ID = 1; //Default to false
+    int found_breakpoint = 1; //Default to false
+    int premisesamt;
+
+    // Variables meant to temporarily store data as its looked at or quickly used then deleted
+    char str[max_e_length];
+    char strtemp[max_e_length];
+    char strtemp2[max_e_length];
+    char filename_temp[max_length];
+
+    char send_back_variable;//Will be used in if function to send user back to select customer actions
+    char stall;
+
+    //User data location as unsigned long integers
+    long unsigned email_location = 0;
+    long unsigned password_location = 0;
+    long unsigned fname_location = 0;
+    long unsigned lname_location = 0;
+    long unsigned user_status_location = 0;
+    long unsigned income_class_location = 0;
+    long unsigned premisesID_location[5];
+    long unsigned meter_size_location[5] = {0};
+    long unsigned last_meter_r_location[5] = {0};
+    long unsigned current_line;
+    int user_has_email = 1; //1 for false - 0 for true
+
+    FILE *loginpointer; // Creates file pointer for login database file
+    FILE *customerdbpointer; // Creates file pointer for customer database file
+    FILE *temp_pointer; // Creates file pointer ( used in making edits to records )
+
+    if(debug == 0)
+    {
+        printf("Program paused to give user chance to see debug\nEnter any character to continue:\n");
+        scanf(" %c",&stall);
+    }
+
+jump_customer_actions: ;
+
+    //Getting user Data
+    current_line = 1;
+
+    loginpointer  = fopen(loginfile,"r"); // Attempts to open file in reading mode (r)
+    customerdbpointer = fopen(customerdatabase,"r"); // Attempts to open file in reading mode (r)
+
+    //EMAIL
+    while(fgets(str,max_e_length,loginpointer)!=NULL && found_breakpoint != 0)
+    {
+        if(strstr(str,id_of_current_account)!=NULL) //If id is found
+        {
+            found_ID = 0;
+        }
+        else if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
+        {
+            found_breakpoint = 0;
+        }
+        
+        //Getting email
+        if(found_ID == 0 && strstr(str,email_prefix) != NULL) 
+        //IF id has already been found and email prefix "User First Name: " has been found
+        //Do:
+        {
+            strcpy(user.email,str);
+            email_location = current_line;
+        }
+        if(found_ID == 0 && strstr(str,password_prefix) != NULL) 
+        //IF id has already been found and email prefix "User First Name: " has been found
+        //Do:
+        {
+            password_location = current_line;
+        }
+        current_line++;
+    }
+
+    found_breakpoint = 1; //Setting found breakpoint ";" back to false
+    found_ID = 1; //Setting found ID back to false
+    
+    int i = 0;
+    
+    current_line = 1;
+    // GETTING EVERYTHING ELSE IN CUSTOMER DATABASE
+    while(fgets(str,max_e_length,customerdbpointer) != NULL && found_breakpoint != 0)
+    {
+        if(strstr(str,id_of_current_account)!=NULL) //If id is found
+        {
+            found_ID = 0;
+        }
+
+        if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
+        {
+            found_breakpoint = 0;   
+            break;
+        }
+
+        //Getting first name
+        if(found_ID == 0 && strstr(str,fname_prefix) != NULL)
+        //IF id has already been found and fname prefix "User First Name: " has been found
+        //Do:
+        {
+            strcpy(user.firstname,str);
+            fname_location = current_line;
+        }
+        //Getting last name
+        else if(found_ID == 0 && strstr(str,lname_prefix) != NULL)
+        {
+            strcpy(user.lastname,str);
+            lname_location = current_line;
+        }
+        //Getting account status
+        else if(found_ID == 0 && strstr(str,status_prefix) != NULL)
+        {
+            strcpy(user.status,str);
+            user_status_location = current_line;
+        }
+        //Getting account status
+        else if(found_ID == 0 && strstr(str,income_class_prefix) != NULL)
+        {
+            clear_stringarray(strtemp);
+            strcpy(strtemp,str);
+            remove_prefix(strtemp,income_class_prefix);
+            user.incomeclass = atoi(strtemp); // converts income class from str to int
+            income_class_location = current_line;
+        }
+
+
+        //Getting premises info
+        char final_prefix[max_length];
+        char i_as_string[1]; // i + terminating char "\0"
+        
+        if(found_ID == 0)
+        {
+            snprintf(i_as_string,12,"%d",i+1); // converts the current value of i to a string and stores it in "i_as_string"
+            // Check for Premises ID
+            if(strstr(str, premisesid_prefix) != NULL)
+            {
+                strcpy(user.premisesID[i], str); // Saves line with premises ID prefix
+                premisesID_location[i] = current_line; // Saves line number where premises id was found
+
+                //Assembles prefix for deletion
+                //String stored in "final_prefix" should look like "Premise ID #1: "
+                snprintf(final_prefix,max_length,premisesid_prefix"%d: ",i+1);
+
+                char *ptr = user.premisesID[i];
+
+                if(strstr(ptr,final_prefix)!=NULL)//If string to be deleted is found
+                {
+                    for(int a = 0; a<(strlen(ptr)); a++)
+                    {
+                        *(ptr+a) = *(ptr+(a+(strlen(final_prefix))));
+                    }
+                }
+
+                strsanitize(ptr,0);
+                strcpy(user.premisesID[i],ptr);
+                ptr = NULL;
+                premisesamt++;
+
+            }
+            
+            // Check for Meter Size
+            else if (strstr(str, metersize_prefix) != NULL)
+            {
+                clear_stringarray(strtemp);
+                clear_stringarray(strtemp2);
+                clear_stringarray(final_prefix);
+
+                strcpy(strtemp2,metersize_prefix);
+                strcpy(strtemp,str);
+                meter_size_location[i] = current_line;
+
+                //Sanitizing Data retrieved
+                strncpy(final_prefix,strcat(strcat(strtemp2,i_as_string),": "),max_length);
+                remove_prefix(strtemp, final_prefix); // Remove prefix
+                user.meter_size[i] = atoi(strtemp); // Convert to integer
+            }
+            // Check for Last Meter Reading
+            else if (strstr(str, lastmeter_r_prefix) != NULL)
+            {
+                clear_stringarray(strtemp);
+                clear_stringarray(strtemp2);
+                clear_stringarray(final_prefix);
+
+                strcpy(strtemp2,lastmeter_r_prefix);
+                strcpy(strtemp, str);
+                last_meter_r_location[i] = current_line;
+
+                //Sanitizing Data retrieved
+                strncpy(final_prefix,strcat(strcat(strtemp2,i_as_string),": "),max_length);
+                remove_prefix(strtemp,final_prefix); // Remove prefix
+                user.meter_reading[i] = strtof(strtemp, NULL); // Convert to float
+                
+                i++; // Increment index after processing all fields for a premise
+            }
+            
+        }
+        current_line++;
+    }
+    
+    fclose(loginpointer);
+    fclose(customerdbpointer);
+
+    //Removes prefix such as "UserID: " from string/s
+    if(strlen(user.email)>0)
+    {
+        remove_prefix(user.email,email_prefix);
+    }
+    remove_prefix(user.firstname,fname_prefix);
+    remove_prefix(user.lastname,lname_prefix);
+    remove_prefix(user.status,status_prefix);
+
+    //Removes "\n" from string/s
+    strsanitize(user.email,0);
+    strsanitize(user.firstname,0);
+    strsanitize(user.lastname,0);
+    strsanitize(user.status,0);
+
+    if(debug == 0)
+    {
+        system(terminal_clear_string);
+        printf("\n=========== DEBUG DATA ===========\n");
+        printf("UserID (from user): %s\n",id_of_current_account);
+        printf("UserID strlen: %lu\n",strlen(id_of_current_account));
+
+        printf("User Status: %s\n",user.status);
+        printf("User Status location: %lu\n\n",user_status_location);
+
+        printf("User Income Class: %d\n",user.incomeclass);
+        printf("User Income Class location: %lu\n",income_class_location);
+
+        if(strlen(user.email)>11) // Email match was found
+        {
+            printf("\nEmail (from file): %s\n",user.email);
+            printf("Email location #: %lu\n",email_location);
+            printf("Email strlen: %lu\n",strlen(user.email));
+            printf("Password location #: %lu\n",password_location);
+        }
+        else // Email match was not found
+        {
+            printf("\nEmail (from file): NO MATCH\n");
+            printf("Email location #: NO MATCH\n");
+            printf("Email strlen: NO MATCH\n");
+            
+        }
+
+        
+        printf("\nFname (from file): %s\n",user.firstname);
+        printf("Fname location #: %lu\n",fname_location);
+        printf("Fname strlen: %lu\n",strlen(user.firstname));
+
+        printf("\nLname (from file): %s\n",user.lastname);
+        printf("Lname location #: %lu\n",lname_location);
+        printf("Lname strlen: %lu\n",strlen(user.lastname));
+
+        if(found_ID == 1)
+        {
+            printf("\nFound ID: FALSE\n");
+        }
+        else if( found_ID == 0)
+        {
+            printf("\nFound ID: TRUE\n");
+        }
+        if(found_breakpoint == 1)                                                                                                                                                                                        
+        {
+            printf("Found Breakpoint: FALSE\n");
+        }
+        else if( found_breakpoint == 0)
+        {
+            printf("Found Breakpoint: TRUE\n");
+        }
+
+        printf("Premises amount: %d\n",premisesamt);   
+
+        //Printing Premises data
+        if(premisesamt>0) // If premises were found
+        {
+            printf(bold_start"\nPremises info (from file):\n"bold_end);
+            for(i = 0; i < premisesamt; i++)
+            {
+                printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
+                printf("Location line #: %lu\n",premisesID_location[i]);
+                printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
+                printf("Location line #: %lu\n",meter_size_location[i]);
+                printf(lastmeter_r_prefix"%d: %.2f\n",i+1, user.meter_reading[i]); 
+                printf("Location line #: %lu",last_meter_r_location[i]);
+                    
+                //Prevents double line space at the end of user record
+                if(i != premisesamt-1)
+                {
+                    printf("\n\n"); 
+                }
+                else
+                {
+                    printf("\n"); 
+                }                      
+            }
+        }
+        printf("==================================\n");
+
+        printf("\nProgram paused to give user chance to see debug\nEnter any character to continue:\n");
+        scanf(" %c",&stall);
+    }
+
+
     system(terminal_clear_string); //Clears command line UI
 
-    printf(bold_start "\n---CUSTOMER TERMINAL---\n\n" bold_end);//Outputting header
+    //Outputting header
+    printf(bold_start"================== CUSTOMER TERMINAL ==================\n\n"bold_end);
+    printf(bold_start"WELCOME! %s %s\n"bold_end,user.firstname,user.lastname);
+    if(is_user_new_account == 0)
+    //if true
+    {
+        printf(bold_start"It seems you have not changed your default password from ************@nzhi"bold_end underline_start"\n\nPlease Enter updated password:\n"underline_end);
+        scanf(" %s",user.password);
 
-    printf("Work in Progresss...enter character to close:\n");
-    scanf(" %c",&close);
+        //Gets password from user
+        char temp_passwordtest[max_length];
+
+        while(strlen(user.password) < 8)
+        {
+            printf(underline_start"\nEnter new password \n( %d characters max ):\n"underline_end,password_length);
+            scanf(" %s",user.password);
+            
+            if(strlen(user.password) < 8)
+            {
+                printf("\nPassword should be AT LEAST 8 characters long\n");
+            }
+        }
+
+        clear_stringarray(temp_passwordtest);
+        strcpy(temp_passwordtest,id_of_current_account);
+        strcat(temp_passwordtest,"@nzhi");
+
+        //Ensures user cant put in same default password as "updated password"
+        while(strstr(user.password,temp_passwordtest) != NULL)
+        {
+            printf(bold_start"\nDefault password cannot be used\n"bold_end);
+            printf(underline_start"\nEnter new password \n( %d characters max ):\n"underline_end,password_length);
+            scanf(" %s",user.password);
+
+            while(strlen(user.password) < 8)
+            {
+                printf(bold_start"\nPassword should be AT LEAST 8 characters long\n"bold_end);
+
+                printf(underline_start"\nEnter new password \n( %d characters max ):\n"underline_end,password_length);
+                scanf(" %s",user.password);
+            }
+        }
+
+        loginpointer = fopen(loginfile,"r"); // Attempts to open file in read mode (r)
+
+        //CHANGING PASSWORD
+        //Creating temporary file to make edits
+        clear_stringarray(filename_temp);
+        strcpy(filename_temp,loginfile); // Copies name of right variable into left
+    
+        int a = 0;
+        for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
+        {
+            if(a<2)
+            {
+                filename_temp[strlen(filename_temp)-(b+a)] = '\0';
+                a++;            
+            }
+    
+        }
+        strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
+        strcat(filename_temp,".txt"); // Adds back .txt to file name
+    
+        temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
+        //Temporary file now created
+    
+        fseek(loginpointer,0,SEEK_SET); //Resests pointer to start of file
+
+        if(temp_pointer != NULL && loginpointer != NULL) // If both files open successfully, do:
+        {
+            current_line = 1;
+            while(fgets(str,max_e_length,loginpointer)!=NULL)
+            {
+                if(current_line == password_location)
+                {
+                    clear_stringarray(strtemp);
+                    snprintf(strtemp,max_e_length,password_prefix"%s\n",user.password);
+                    fputs(strtemp,temp_pointer);
+                }
+                else
+                {
+                    fputs(str,temp_pointer);
+                }
+                current_line++;
+            }
+        
+            fclose(loginpointer);
+            fclose(temp_pointer);
+            clear_stringarray(str);
+            clear_stringarray(strtemp);
+    
+            if(remove(loginfile) != 0)
+            {
+                if(debug == 0)
+                {
+                    perror("\nError msg");
+                    printf(bold_start"\n-Failed to Remove File-\n"bold_end);
+                }
+            }  
+            else if(rename(filename_temp,loginfile) != 0)
+            {
+                if(debug == 0)
+                {
+                    perror("\nError msg");
+                    printf(bold_start"\n-Failed to Replace File-\n"bold_end);
+                }
+            }
+            else
+            {
+                printf(bold_start"\n-Password Changed-\n"bold_end);
+                audit_editcustomer(9,user.customerID);
+
+                system(terminal_clear_string);
+                //Outputting header
+                printf(bold_start"================== CUSTOMER TERMINAL ==================\n\n"bold_end);
+                
+                printf(bold_start"WELCOME! %s %s\n"bold_end,user.firstname,user.lastname);
+            }
+
+
+        }
+        else
+        {
+            printf(file_open_error);
+        }
+    }
+    else
+    {
+        printf(bold_start"WELCOME! %s %s\n"bold_end,user.firstname,user.lastname);
+    }
+
+    printf(underline_start"\nEnter choice of action:\n"underline_end);
+    printf("(1) - Register Payment Card/s\n");
+
+    scanf(" %d", &action);
+
+    switch(action)
+    {
+        case 1:
+            //Code here
+            break;
+
+        case 2:
+            //Code here
+            break;
+    }
+    
+    system(terminal_clear_string);  //Clears command line UI
     
     close_console(delay_time,print_delay);
 
@@ -2550,6 +3342,7 @@ int addcustomer (char *filename,char *filename2, char *customerID, char *user_fi
 {
     FILE *fp;
     char tmp_user_password[9];
+    char strtemp[max_e_length];
             
     //attempts to open login Database file
     fp = fopen(filename, "a");
@@ -2582,7 +3375,13 @@ int addcustomer (char *filename,char *filename2, char *customerID, char *user_fi
     }
     
     fclose(fp);
-        
+    
+    srand(time(NULL)); //Sets random function's seed to current time
+    int min = 1;
+    int max = 5;
+    
+    int income_class1  = min + rand() % ((max - min)+1); // Assigns a random integer ( from max to min ) to variable
+
     //attempts to open Customer Database file
     fp = fopen(filename2, "a");
     if(fp != NULL)
@@ -2594,7 +3393,11 @@ int addcustomer (char *filename,char *filename2, char *customerID, char *user_fi
 
         fputs(status_prefix"ACTIVE", fp);
         fputs("\n", fp);
-            
+
+        snprintf(strtemp,max_e_length,income_class_prefix"%d\n",income_class1);
+        fputs(strtemp,fp);
+        fputs("\n", fp);
+
         fputs(fname_prefix, fp);
         fputs(user_firstname, fp);
         fputs("\n", fp);
@@ -2627,7 +3430,7 @@ checked against the user inputted data.
 // Returns 0 if login successful
 // Returns 1 if login unsuccessful
 // Returns 2 if login sucessful for admin account
-int user_login (char *email, char *password, char* tempID)
+int user_login (char *email, char *password, char* tempID, int* is_user_new)
 {
     //1. Attempts to open file name stored in "loginfile" ( login_database.txt)
     FILE*fp = fopen(loginfile, "r");
@@ -2650,7 +3453,7 @@ int user_login (char *email, char *password, char* tempID)
         while(fgets(str,max_e_length,fp) != NULL)
         
         {
-            if(strstr(str,"UserID: ") != NULL && login_validation == 1)//An id prefix FOUND
+            if(strstr(str,id_prefix) != NULL && login_validation == 1)//An id prefix FOUND
             {
                 position1 = ftell(fp); // Saves where ID was found as character index
                 
@@ -2662,13 +3465,13 @@ int user_login (char *email, char *password, char* tempID)
                 {
                     printf("\n\n=========== DEBUG DATA ===========\n");
                     printf("Raw string from txt file (ID lookup): %s\n",tmpID_hold);
-                    printf("userID pointer location: %ld\n", position1);
+                    printf("UserID line location: %ld\n", position1);
                 }
             }
             
-            if(strstr(str, "User Email: ") != NULL && strstr(str, email) != NULL)//If email is found
+            if(strstr(str,email_prefix) != NULL && strstr(str, email) != NULL)//If email is found
             {
-                //Assigns email found at if statement to found_email
+                //Assigns email found at ^ statement to "found_email"
                 char *found_email = strstr(str, email);
                 
                 if (found_email != NULL)
@@ -2769,7 +3572,7 @@ int user_login (char *email, char *password, char* tempID)
                 }
                 else if(strcmp(temp_email,email) == 0 && strcmp(temp_password,hashed_password) == 0)
                 {
-                    login_validation = 0; //Successful login
+                    login_validation = 0; //Successful customer login
                 }
             }
         }
@@ -2782,6 +3585,7 @@ int user_login (char *email, char *password, char* tempID)
     /**Given the login was successful, goes back to place in file
     where ID was found and saves that value into variable passed into function
     **/
+    char *ptr;
     if(login_validation == 0 || login_validation == 2)
     {
         if(fseek(fp,position1,SEEK_CUR)==0)//Brings file pointer 1 line before UserID associated with user credentials
@@ -2792,14 +3596,14 @@ int user_login (char *email, char *password, char* tempID)
                 strcpy(tmpID_hold,str);
             }
 
-            char *ptr = tmpID_hold;
+            ptr = tmpID_hold;
 
             //Sanitizing string ( removing new line values(\n), carriages(\r), white space(" ") and other unwanted characters)
             if(strstr(ptr,id_prefix)!=NULL)//If string to be deleted is found
             {
                 for(int i = 0; i<(strlen(ptr)); i++)
                 {
-                    //UserID: 5343075
+                    // "UserID: 5343075" ->> "5343075"
                     *(ptr+i) = *(ptr+(i+(strlen(id_prefix))));
                 }
             }
@@ -2808,12 +3612,47 @@ int user_login (char *email, char *password, char* tempID)
 
             if (debug == 0)
             {
-                printf("\nID send to audit function: %s\n",tempID);
+                printf("\nID sent to audit function: %s\n",tempID);
             }
         }
         else if(fseek(fp,position1,SEEK_CUR) !=0 && debug == 0)
         {
             printf("\nfseek error\n");
+        }
+
+        if(login_validation == 0 || login_validation == 2)
+        {
+            clear_stringarray(str);
+            clear_stringarray(temp_password);
+
+            strcpy(temp_password,ptr); //Copies ID found in previous lines into temp_password
+            strcat(temp_password,"@nzhi");  //Adds @nzhi to the end of ^
+            hash_djb2(temp_password,str); // Hashes ^
+            
+            if(debug == 0)
+            {
+                printf("\n\nChecking if user is using default password\n");
+                printf("PASSWORD FROM USER BEING CHECKED: %s\n",hashed_password);
+                printf("strlen: %lu\n",strlen(hashed_password));
+                printf("EXPECTED PASSWORD: %s\n",str);
+                printf("strlen: %lu\n",strlen(str));
+                printf("is_user_new value check before strstr: %d\n",*is_user_new);
+            }
+
+            
+            if(strstr(hashed_password,str) != NULL) // Checks if the account has a password that would 
+                                                 // be the default given when account is created in admin terminal
+            {
+                if(debug == 0)
+                {
+                    printf("User account new!\n");
+                }
+                *is_user_new = 0; // Set to true  
+            }
+            if(debug == 0)
+            {
+                printf("is_user_new value check after strstr: %d\n",*is_user_new);
+            }
         }
     }
 
@@ -3153,9 +3992,12 @@ void strsanitize(char *input_string,const int sanitize_type)
 
 void clear_stringarray(char *string_tobe_cleared)
 {
-    for(int i = 0; i<strlen(string_tobe_cleared); i++)
+    if(strlen(string_tobe_cleared)>0)
     {
-        *(string_tobe_cleared+i) = 0;
+        for(int i = 0; i<strlen(string_tobe_cleared); i++)
+        {
+            *(string_tobe_cleared+i) = 0;
+        }
     }
 }
 
@@ -3189,31 +4031,43 @@ void audit_editcustomer(int audit_type, char * customerID)
 
         if (audit_type == 1) //Edit made to customer email
         {
+            fputs("Edit made to customer income class (by admin)\n", fp);
+        }
+        else if (audit_type == 2) //Edit made to customer email
+        {
             fputs("Edit made to customer email (by admin)\n", fp);
         }
-        else if (audit_type == 2) //Edit made to customer first name
+        else if (audit_type == 3) //Edit made to customer first name
         {
             fputs("Edit made to customer first name (by admin)\n", fp);
         }
-        else if (audit_type == 3) //Edit made to customer last name
+        else if (audit_type == 4) //Edit made to customer last name
         {
             fputs("Edit made to customer last name (by admin)\n", fp);
         }
-        else if (audit_type == 4)
+        else if (audit_type == 5)
         {
             fputs("Edit made to customer meter size (by admin)\n", fp);
         }
-        else if (audit_type == 5)
+        else if (audit_type == 6)
         {
             fputs("Edit made to customer meter reading (by admin)\n", fp);
         }
-        else if(audit_type == 6)
+        else if(audit_type == 7)
         {
             fputs("Edit made to all customer fields (by admin)\n", fp);
         }
-        else if(audit_type == 7)
+        else if(audit_type == 8)
         {
             fputs("Customer account archived (by admin)\n", fp);
+        }
+        else if(audit_type == 9)
+        {
+            fputs("Edit made to customer password (by customer)\n", fp);
+        }
+        else if(audit_type == 10)
+        {
+            fputs("Edit made to customer password (by admin)\n", fp);
         }
 
         //Format MONTH - DAY - YEAR
