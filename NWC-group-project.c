@@ -2,8 +2,6 @@
 <Author Name>
 Created Febraury 23, 2025
 
-//If using linux, change "_getwch()" to "getch()"
-
 //HARD CODED ADMIN LOGIN
 Password "00000000"
 Email "admin@gmail.com"
@@ -13,7 +11,7 @@ New accounts added by admin terminal, automatically generates their gmail and pa
 gmail: <lastname><id#>@gmail.com 
 password: <id#>@nzhi
 
-User will be prompted to change this password upon login to their account.
+user will be prompted to change this password upon login to their account.
 *******************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +28,7 @@ User will be prompted to change this password upon login to their account.
 #define bold_start "\e[1m"
 #define bold_end  "\e[m"
 #define underline_start "\033[4m"
-#define underline_end "\033[0m"
+#define underline_end "\033[0m" 
 #define text_red_start "\033[0;31m"
 #define text_color_end "\033[0m"
 
@@ -73,6 +71,7 @@ User will be prompted to change this password upon login to their account.
 #define service_c_prefix "Service Charge: "
 #define early_pr_prefix "Early Payment Reduction: " 
 #define bill_status_prefix "Bill Status: " // 1 for unpaid & 0 for paid
+#define surrender_prefix "-SR"
 
 //Initalizing variables
 char registered;
@@ -189,6 +188,14 @@ english alphabet in it*/
 // Returns 0 if string has letters
 int strhchar(char *string_to_check);
 
+/**20. Function that sets all characters in an array to uppercase**/
+void setall_uppercase (char* string);
+
+/*21. Function that takes in a string and returns a 1 or 0 depending on if that string has a number in it*/
+// Returns 0 if string has no numbers
+// Returns 1 if string has numbers
+int strhint(char *string_to_check);
+
 //Terminals
 void admin_terminal(char *terminal_clear_string);
 
@@ -276,12 +283,21 @@ long unsigned balance_tbp_location = 0;
 
 long unsigned current_line = 0;
 
+/************************* MAIN TERMINAL  **********************/
+
 void main()
 {
   
     //Gets what terminal the user is running so the clear command line function "system()" works properly
     printf("-Are you on a windows or linux terminal -\n(L) for Linux\n(W) for Windows - Select this if unsure\n");
     scanf(" %c", &terminal);
+    
+    while(terminal != 'W' && terminal != 'w' && terminal != 'L' && terminal != 'l')
+    {
+        printf(bold_start"\nINVALID SELECTION\n"bold_end);
+        printf("-Are you on a windows or linux terminal -\n(L) for Linux\n(W) for Windows - Select this if unsure\n");
+        scanf(" %c", &terminal);
+    }
     
     if(terminal == 'W' || terminal == 'w')
     {
@@ -292,7 +308,6 @@ void main()
         strcpy(clear_terminal,"clear");
         debug_scanfpassword = 0;
     }
-    
     
 /************************* DATABASE CREATION **********************/
     
@@ -449,7 +464,6 @@ void main()
         if(debug == 0)
         {
             printf(" starter data inserted-\n");
-            printf("============================================\n");
         }
     }
     else
@@ -457,7 +471,6 @@ void main()
         if(debug == 0)
         {
             printf("\n-Billing Logs found ( new file not created )-\n");
-            printf("============================================\n");
         }
     } 
     
@@ -475,7 +488,7 @@ void main()
             
         if(debug == 0)
         {
-            printf("\n-Credit card database have been created-");
+            printf("-Credit card database have been created-\n");
         }
         fclose(fp);
             
@@ -494,18 +507,17 @@ void main()
     {
         if(debug == 0)
         {
-            printf("\n-Credit card database found ( new file not created )-\n");
+            printf("-Credit card database found ( new file not created )-\n");
             printf("============================================\n");
         }
     }  
 /***************************** MAIN UI **************************/
-    
-    //Are you a registered user?
     if(debug == 0)
     {
         printf("\n");
     }
-    
+
+    //Are you a registered user?
     printf("Are you a registered user? \n(Y) for yes\n(N) for no\n\n");
     scanf(" %c", &registered);
     
@@ -513,8 +525,8 @@ void main()
     {
         fflush(stdin);
         system(clear_terminal);
-        printf(bold_start"-Invalid input-"bold_end);
-        printf("\n\nAre you a registered user? \n(Y) for yes\n(N) for no\n\n");
+        printf(bold_start"-Invalid input-\n"bold_end);
+        printf("Are you a registered user? \n(Y) for yes\n(N) for no\n");
         scanf(" %c", &registered);
     }
     
@@ -578,11 +590,24 @@ void main()
 
             printf(underline_start"\nEnter your first name:\n"underline_end);
             scanf("%s", user.firstname);
-            
+
+            while(strhint(user.firstname) != 1)
+            {
+                printf(bold_start"\n-name cannot have numbers-\n"bold_end);
+                printf(underline_start"\nEnter First Name: \n"underline_end);
+                scanf(" %s",user.firstname);
+            }            
+
             printf(underline_start"\nEnter your last name:\n"underline_end);
             scanf("%s", user.lastname);
             
-            
+            while(strhint(user.lastname) != 1)
+            {
+                printf(bold_start"\n-name cannot have numbers-\n"bold_end);
+                printf(underline_start"\nEnter Last Name: \n"underline_end);
+                scanf(" %s",user.lastname);
+            }  
+
             //Generating random customer ID
             int temp_ID = generateID();
             
@@ -826,7 +851,7 @@ jump_admin_actions:
         printf("(3) - View customer/s\n");
         printf("(4) - Delete/Archive customer/s\n");
         printf("(5) - Generate Bill customer/s\n");
-        //printf("6 - View reports\n");
+        printf("(6) - View reports\n");
         printf("(7) - View Audit Logs\n");
         printf("(0) - Close Terminal\n\n");
         scanf(" %c", &action);
@@ -859,14 +884,21 @@ jump_admin_actions:
 
             //GETTINGS USER ID
             //Ensuring ID is atleast 7 digits long
-            while(strlen(user.customerID)!=7)
+            while(strlen(user.customerID)!=7 || strhchar(user.customerID)==0)
             {
+                if(strhchar(user.customerID)==0)
+                {
+                    printf(bold_start"\n-ID cannot have letters-\n\n"bold_end);
+                    printf(underline_start"Enter new Customer ID:\n"underline_end);
+                    scanf(" %s", user.customerID);
+                    continue;
+                }
                 printf(bold_start"\n-Min & Max ID length is (7) digits!-\n\n"bold_end);
                 printf(underline_start"Enter new Customer ID:\n"underline_end);
                 scanf(" %s", user.customerID);
             }
 
-            //Ensuring no dupliciate IDs can be made
+            //Ensuring no duplicate IDs can be made
             while(duplicate_check(user.customerID,customerdatabase,id_prefix) != 2)
             {
                 printf(bold_start"\n-ID already in use-\n"bold_end);
@@ -885,6 +917,13 @@ jump_admin_actions:
             printf(underline_start"\nEnter Customer First Name: \n"underline_end);
             scanf(" %s",user.firstname);
 
+            while(strhint(user.firstname) != 1)
+            {
+                printf(bold_start"\n-Customer name cannot have numbers-\n"bold_end);
+                printf(underline_start"\nEnter Customer First Name: \n"underline_end);
+                scanf(" %s",user.firstname);
+            }
+
             system(terminal_clear_string); // Clears command line UI
             
             printf(bold_start"================== CUSTOMER DATABASE DEMO ==================\n"bold_end); //Outputting file header with user entered data           
@@ -895,6 +934,13 @@ jump_admin_actions:
 
             printf(underline_start"\nEnter Customer Last Name: \n"underline_end);
             scanf(" %s",user.lastname);
+
+            while(strhint(user.lastname) != 1)
+            {
+                printf(bold_start"\n-Customer name cannot have numbers-\n"bold_end);
+                printf(underline_start"\nEnter Customer Last Name: \n"underline_end);
+                scanf(" %s",user.lastname);
+            }
 
             system(terminal_clear_string); // Clears command line UI
 
@@ -916,29 +962,49 @@ jump_admin_actions:
             }
 
             //Gettings Premises details 
-            char temp_premisesID_hold[5][max_e_length] = {0}; // Variable used to store premises numbers already entered 
-            for(int i = 0; i < premisesamt; i++)        // and check to ensure current premises IDs  being entered, dont match past ones
+            char temp_premisesID_hold[5][max_e_length] = {0}; // Variable used to store premises numbers already entered
+            int id_record_exists = 1; // Default to false 
+            for(i = 0; i < premisesamt; i++)          // and check to ensure current premises IDs  being entered, dont match past ones
             {
                 int redo_gettingID = 1; // Default to false
                 printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
                 scanf(" %s",strtemp);
-
-                //Ensuring Premises ID entered is 7 digits long
-                while(strlen(strtemp)!=7)
+                
+                //Ensuring Premises ID entered is 7 digits long and contains only numbers
+                while(strlen(strtemp)!=7 && strhchar(strtemp) != 1)
                 {
-                    printf(bold_start"\n\n-Max & Min ID size is (7) digits-\n\n"bold_end);
+                    if(strhchar(strtemp) != 1)
+                    {
+                        printf(bold_start"\n-Premises ID cannot contain letters\n"bold_end);
+                        printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
+                        scanf(" %s",strtemp);
+                        continue;
+                    }
+                    printf(bold_start"\n-Max & Min ID size is (7) digits-\n"bold_end);
                     printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
                     scanf(" %s",strtemp);
                 }
-
+                
                 //Ensuring no dupliciate Premises ID can be made
                 while(duplicate_check(strtemp,customerdatabase,premisesid_prefix) != 2)
                 {
-                    printf(bold_start"\n-Premises In Use-\n\n"bold_end);
-                    printf(underline_start"Enter New Premises ID #%d: \n"underline_end,i+1);
-                    scanf(" %s",strtemp);
+                    // Checking if duplicate ID is surrendered
+                    strcpy(strtemp2,strtemp);
+                    strcat(strtemp2,surrender_prefix);
+                    if(duplicate_check(strtemp2,customerdatabase,premisesid_prefix) != 1)
+                    // ID found was not surrendered, do:
+                    {
+                        printf(bold_start"\n-Premises In Use-\n\n"bold_end);
+                        printf(underline_start"Enter New Premises ID #%d: \n"underline_end,i+1);
+                        scanf(" %s",strtemp);
+                    }
+                    else
+                    {
+                        id_record_exists = 0; // Premises ID is available
+                        break; // Premises ID is available as the other instance found is marked as surrendered
+                    }
                 }
-
+                
                 strcpy(temp_premisesID_hold[i],strtemp);
                 
                 if(debug == 0)
@@ -972,25 +1038,125 @@ jump_admin_actions:
                 else
                 {
                     strcpy(user.premisesID[i],strtemp);
+                    
+                    char choice;
+                    int temp_mtr_size=0;
+                    float temp_lmtr_reading=0;
+                    int temp_premises_amt = 0;
 
-                    printf(underline_start"\nEnter Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
-                    scanf("%d",&user.meter_size[i]);
-
-                    //Ensuring user can only select one of 3 options available
-                    //Meter size 1 - 150
-                    //Meter size 2 - 30
-                    //Meter size 3 - 15
-                    while(user.meter_size[i] != meter1 && user.meter_size[i] != meter2 && user.meter_size[i] != meter3)
+                    //Using previous meter size from file
+                    if(id_record_exists != 1)
                     {
-                        printf(bold_start"\n-Invalid meter size-\n"bold_end);
-                        printf(underline_start"\nEnter VALID Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
-                        scanf("%d",&user.meter_size[i]);
+                        customerdbpointer = fopen(customerdatabase,"r"); // attempts to open file in READ mode (r)
+
+                        found_ID = 1; //Default to false
+                        found_breakpoint = 1; //Default to false
+                        
+                        if(customerdbpointer != NULL)
+                        {
+
+                            while(fgets(str,max_e_length,customerdbpointer)!= NULL && found_breakpoint != 0)
+                            {
+                                if(strstr(str,premisesid_prefix) != NULL && strstr(str,strtemp2) != NULL) // If id is found
+                                {
+                                    found_ID = 0;
+                                }
+                                if(strstr(str,data_breakpoint) != NULL && found_ID == 0)
+                                {
+                                    found_breakpoint = 0;
+                                    break;
+                                }
+
+                                //Getting specific premises info
+                                if(found_ID == 0)
+                                {
+                                    if(strstr(str,premisesid_prefix))
+                                    {
+                                        temp_premises_amt++;
+                                    }
+                                    else if(strstr(str,metersize_prefix))
+                                    {
+                                        snprintf(strtemp2,max_e_length,metersize_prefix"%d: ",temp_premises_amt);
+                                        remove_prefix(str,strtemp2);
+                                        temp_mtr_size = atoi(str);
+                                    }
+                                    else if(strstr(str,lastmeter_r_prefix))
+                                    {
+                                        snprintf(strtemp2,max_e_length,lastmeter_r_prefix"%d: ",temp_premises_amt);
+                                        remove_prefix(str,strtemp2);
+                                        temp_lmtr_reading = atof(str);
+                                    }
+                                }
+                            }
+                            fclose(customerdbpointer);
+
+                            printf("\nPrevious meter size found for premises ID (%s)\nWould you like to use it? (Y) Yes OR (N) No\n",user.premisesID[i]);
+                            scanf(" %c", &choice);
+
+                            while(choice != 'Y' && choice != 'y' && choice != 'N' && choice != 'n')
+                            {
+                                printf(bold_start"\n-Invalid Response-\n"bold_end);
+                                printf("Would you like to use it? (Y) Yes OR (N) No\n");
+                                scanf(" %c", &choice);
+                            }
+
+                            if(choice == 'Y' || choice == 'y')
+                            {
+                                user.meter_size[i] = temp_mtr_size;  
+                            }
+                        }
+                        else
+                        {
+                            printf(file_open_error);
+                        }
                     }
 
-                    printf(underline_start"\nEnter Initial Meter Reading #%d:\n"underline_end,i+1);
-                    scanf(" %f",&user.meter_reading[i]);
-                }
+                    // Getting new size
+                    if(id_record_exists == 1 || choice == 'N' || choice == 'n')
+                    {
+                        printf(underline_start"\nEnter Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
+                        scanf("%d",&user.meter_size[i]);
 
+                        //Ensuring user can only select one of 3 options available
+                        //Meter size 1 - 150
+                        //Meter size 2 - 30
+                        //Meter size 3 - 15
+                        while(user.meter_size[i] != meter1 && user.meter_size[i] != meter2 && user.meter_size[i] != meter3)
+                        {
+                            printf(bold_start"\n-Invalid meter size-\n"bold_end);
+                            printf(underline_start"\nEnter VALID Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
+                            scanf("%d",&user.meter_size[i]);
+                        }
+                    }
+                    
+                    //Using previous meter reading from file
+                    if(id_record_exists != 1)
+                    {
+                        printf("\nPrevious meter reading found for premises ID (%s)\nWould you like to use it? (Y) Yes OR (N) No\n",user.premisesID[i]);
+                        scanf(" %c", &choice);
+
+                        while(choice != 'Y' && choice != 'y' && choice != 'N' && choice != 'n')
+                        {
+                            printf(bold_start"\n-Invalid Response-\n"bold_end);
+                            printf("Would you like to use it? (Y) Yes OR (N) No\n");
+                            scanf(" %c", &choice);
+                        }
+
+                        if(choice == 'Y' || choice == 'y')
+                        {
+                            user.meter_reading[i] = temp_lmtr_reading;  
+                        }
+                    }
+
+                    // Getting new reading
+                    if(id_record_exists == 1 || choice == 'N' || choice == 'n')
+                    {
+                        printf(underline_start"\nEnter Initial Meter Reading #%d:\n"underline_end,i+1);
+                        scanf(" %f",&user.meter_reading[i]);
+                    }
+                    
+                }
+                
             }
 
             system(terminal_clear_string); // Clears command line UI
@@ -1160,6 +1326,7 @@ jump_admin_actions:
         case '2': // Edit customer/s     
             int user_has_email = 1; //1 for false - 0 for true
             int fault_check;
+            int surrendered_premises_amt = 0;
             premisesamt = 0; // Clear any value stored from previous actions
             
             printf(bold_start"================== CUSTOMER DATABASE ==================\n\n"bold_end); //Outputting file header
@@ -1275,7 +1442,7 @@ jump_admin_actions:
                         strcpy(user.status,str);
                         user_status_location = current_line;
                     }
-                    //Getting account status
+                    //Getting income class
                     else if(found_ID == 0 && strstr(str,income_class_prefix) != NULL)
                     {
                         clear_stringarray(strtemp);
@@ -1288,7 +1455,7 @@ jump_admin_actions:
                     //Getting premises info
                     char final_prefix[max_length];
                     char i_as_string[1]; // i + terminating char "\0"
-                    
+                    surrendered_premises_amt = 0;
                     if(found_ID == 0)
                     {
                         snprintf(i_as_string,12,"%d",i+1); // converts the current value of i to a string and stores it in "i_as_string"
@@ -1315,8 +1482,12 @@ jump_admin_actions:
                             strsanitize(ptr,0);
                             strcpy(user.premisesID[i],ptr);
                             ptr = NULL;
-                            premisesamt++;
-
+                            premisesamt++; 
+                    
+                            if(strstr(str,surrender_prefix)!=NULL)
+                            {
+                                surrendered_premises_amt++;
+                            }
                         }
                         
                         // Check for Meter Size
@@ -1394,13 +1565,23 @@ jump_admin_actions:
                 //Printing Premises data
                 if(premisesamt>0)
                 {
-                    printf(bold_start"\nPREMISES OWNED %d\n"bold_end,premisesamt);
+                    if(premisesamt-surrendered_premises_amt>0)
+                    {
+                        printf(bold_start"\nPREMISES OWNED %d\n"bold_end,premisesamt-surrendered_premises_amt);
+                    }
                     for(i = 0; i < premisesamt; i++)
                     {
-                        printf(text_red_start premisesid_prefix"%d: %s\n"text_color_end,i+1, &user.premisesID[i][0]);
-                        printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
-                        printf(lastmeter_r_prefix"%d: %.2f",i+1, user.meter_reading[i]); 
-                            
+                        if(strstr(user.premisesID[i],surrender_prefix)==NULL)
+                        {
+                            printf(text_red_start premisesid_prefix"%d: %s\n"text_color_end,i+1, &user.premisesID[i]);
+                            printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
+                            printf(lastmeter_r_prefix"%d: %.2f",i+1, user.meter_reading[i]); 
+                        }
+                        else
+                        {
+                            continue; //If premises ID is marked for surrender, skip to next iteration
+                        } 
+
                         //Prevents double line space at the end of user record
                         if(i != premisesamt-1)
                         {
@@ -1409,7 +1590,8 @@ jump_admin_actions:
                         else
                         {
                             printf("\n"); 
-                        }                      
+                        } 
+               
                     }
                 }
 
@@ -1961,8 +2143,8 @@ jump_admin_actions:
                     printf(underline_start"\nWhat meter # would you like to change?\n"underline_end);
                     scanf("%d",&choice);
 
-                    //Ensuring user can't edit meter that customer dosen't haves
-                    while(choice > premisesamt)
+                    //Ensuring user can't edit meter that customer dosen't have
+                    while(choice > premisesamt || choice < 1 || strstr(user.premisesID[choice-1],surrender_prefix)!=NULL)
                     {
                         printf(bold_start"\n-Customer owns no such meter #-\n"bold_end);
                         printf(underline_start"\nEnter VALID meter #:\n"underline_end);
@@ -2073,7 +2255,7 @@ jump_admin_actions:
                     scanf("%d",&choice);
 
                     //Ensuring user can't edit meter that customer dosen't haves
-                    while(choice > premisesamt)
+                    while(choice > premisesamt || choice < 1 || strstr(user.premisesID[choice-1],surrender_prefix)!=NULL)
                     {
                         printf(bold_start"\n-Customer owns no such meter reading #-\n"bold_end);
                         printf(underline_start"\nEnter VALID meter reading #:\n"underline_end);
@@ -2507,22 +2689,28 @@ jump_admin_actions:
                 //ADDING PREMISES
                 else if (premisesamt > 0 && choice == 8 || premisesamt == 0 && choice == 6)
                 {
-                    if (premisesamt < 5)
+                    if (premisesamt-surrendered_premises_amt < 5)
                     {
                         int premises_to_add;
-                        printf(underline_start"\nHow many Premises would you like to add (Max 5 per customer): \n"underline_end);
+                        system(terminal_clear_string); //Clears command line UI
+                        printf(bold_start"================== ADDING PREMISES ==================\n\n"bold_end); //Outputting file header
+                        printf("CUSTOMER NAME: %s %s\n",user.firstname,user.lastname);
+                        printf("CUSTOMER ID: %s\n\n",user.customerID);
+
+                        printf(underline_start"How many Premises would you like to add (Max 5 per customer): \n"underline_end);
                         scanf(" %d", &premises_to_add);
                         
                         //Ensuring user cannot select more than 5 premises to add
-                        while(premises_to_add+premisesamt>5)
+                        while(premises_to_add+(premisesamt-surrendered_premises_amt)>5)
                         {
-                            printf(bold_start"\nCustomer only has %d slots available\n\n"bold_end,5-premisesamt);
+                            printf(bold_start"\nCustomer only has %d slot/s available\n\n"bold_end,5-(premisesamt-surrendered_premises_amt));
                             printf(underline_start"How many Premises would you like to add (Max 5 per customer): \n"underline_end);
                             scanf(" %d", &premises_to_add);
                         }
                             
                         //Gettings Premises details 
-                        char temp_premisesID_hold[5][max_e_length] = {0}; // Variable used to store premises numbers already entered 
+                        char temp_premisesID_hold[5][max_e_length] = {0}; // Variable used to store premises numbers already entered
+                        int id_record_exists = 1; // Default to false 
                         for(int i = 0; i < premises_to_add; i++)          // and check to ensure current premises IDs  being entered, dont match past ones
                         {
                             int redo_gettingID = 1; // Default to false
@@ -2540,9 +2728,21 @@ jump_admin_actions:
                             //Ensuring no dupliciate Premises ID can be made
                             while(duplicate_check(strtemp,customerdatabase,premisesid_prefix) != 2)
                             {
-                                printf(bold_start"\n-Premises In Use-\n\n"bold_end);
-                                printf(underline_start"Enter New Premises ID #%d: \n"underline_end,i+1);
-                                scanf(" %s",strtemp);
+                                // Checking if duplicate ID is surrendered
+                                strcpy(strtemp2,strtemp);
+                                strcat(strtemp2,surrender_prefix);
+                                if(duplicate_check(strtemp2,customerdatabase,premisesid_prefix) != 1)
+                                // ID found was not surrendered, do:
+                                {
+                                    printf(bold_start"\n-Premises In Use-\n\n"bold_end);
+                                    printf(underline_start"Enter New Premises ID #%d: \n"underline_end,i+1);
+                                    scanf(" %s",strtemp);
+                                }
+                                else
+                                {
+                                    id_record_exists = 0; // Premises ID is available
+                                    break; // Premises ID is available as the other instance found is marked as surrendered
+                                }
                             }
                             
                             strcpy(temp_premisesID_hold[i],strtemp);
@@ -2579,22 +2779,121 @@ jump_admin_actions:
                             {
                                 strcpy(user.premisesID[i],strtemp);
                                 
-                                printf(underline_start"\nEnter Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
-                                scanf("%d",&user.meter_size[i]);
-                                
-                                //Ensuring user can only select one of 3 options available
-                                //Meter size 1 - 150
-                                //Meter size 2 - 30
-                                //Meter size 3 - 15
-                                while(user.meter_size[i] != meter1 && user.meter_size[i] != meter2 && user.meter_size[i] != meter3)
+                                char choice;
+                                int temp_mtr_size=0;
+                                float temp_lmtr_reading=0;
+                                int temp_premises_amt = 0;
+
+                                //Using previous meter size from file
+                                if(id_record_exists != 1)
                                 {
-                                    printf(bold_start"\n-Invalid meter size-\n"bold_end);
-                                    printf(underline_start"\nEnter VALID Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
+                                    customerdbpointer = fopen(customerdatabase,"r"); // attempts to open file in READ mode (r)
+
+                                    found_ID = 1; //Default to false
+                                    found_breakpoint = 1; //Default to false
+                                    
+                                    if(customerdbpointer != NULL)
+                                    {
+        
+                                        while(fgets(str,max_e_length,customerdbpointer)!= NULL && found_breakpoint != 0)
+                                        {
+                                            if(strstr(str,premisesid_prefix) != NULL && strstr(str,strtemp2) != NULL) // If id is found
+                                            {
+                                                found_ID = 0;
+                                            }
+                                            if(strstr(str,data_breakpoint) != NULL && found_ID == 0)
+                                            {
+                                                found_breakpoint = 0;
+                                                break;
+                                            }
+
+                                            //Getting specific premises info
+                                            if(found_ID == 0)
+                                            {
+                                                if(strstr(str,premisesid_prefix))
+                                                {
+                                                    temp_premises_amt++;
+                                                }
+                                                else if(strstr(str,metersize_prefix))
+                                                {
+                                                    snprintf(strtemp2,max_e_length,metersize_prefix"%d: ",temp_premises_amt);
+                                                    remove_prefix(str,strtemp2);
+                                                    temp_mtr_size = atoi(str);
+                                                }
+                                                else if(strstr(str,lastmeter_r_prefix))
+                                                {
+                                                    snprintf(strtemp2,max_e_length,lastmeter_r_prefix"%d: ",temp_premises_amt);
+                                                    remove_prefix(str,strtemp2);
+                                                    temp_lmtr_reading = atof(str);
+                                                }
+                                            }
+                                        }
+                                        fclose(customerdbpointer);
+
+                                        printf("\nPrevious meter size found for premises ID (%s)\nWould you like to use it? (Y) Yes OR (N) No\n",user.premisesID[i]);
+                                        scanf(" %c", &choice);
+
+                                        while(choice != 'Y' && choice != 'y' && choice != 'N' && choice != 'n')
+                                        {
+                                            printf(bold_start"\n-Invalid Response-\n"bold_end);
+                                            printf("Would you like to use it? (Y) Yes OR (N) No\n");
+                                            scanf(" %c", &choice);
+                                        }
+
+                                        if(choice == 'Y' || choice == 'y')
+                                        {
+                                            user.meter_size[i] = temp_mtr_size;  
+                                        }
+                                    }
+                                    else
+                                    {
+                                        printf(file_open_error);
+                                    }
+                                }
+
+                                // Getting new size
+                                if(id_record_exists == 1 || choice == 'N' || choice == 'n')
+                                {
+                                    printf(underline_start"\nEnter Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
                                     scanf("%d",&user.meter_size[i]);
+
+                                    //Ensuring user can only select one of 3 options available
+                                    //Meter size 1 - 150
+                                    //Meter size 2 - 30
+                                    //Meter size 3 - 15
+                                    while(user.meter_size[i] != meter1 && user.meter_size[i] != meter2 && user.meter_size[i] != meter3)
+                                    {
+                                        printf(bold_start"\n-Invalid meter size-\n"bold_end);
+                                        printf(underline_start"\nEnter VALID Meter size (%dmm - %dmm - %dmm) #%d:\n"underline_end,meter3,meter2,meter1,i+1);
+                                        scanf("%d",&user.meter_size[i]);
+                                    }
                                 }
                                 
-                                printf(underline_start"\nEnter Initial Meter Reading #%d:\n"underline_end,i+1);
-                                scanf(" %f",&user.meter_reading[i]);
+                                //Using previous meter reading from file
+                                if(id_record_exists != 1)
+                                {
+                                    printf("\nPrevious meter reading found for premises ID (%s)\nWould you like to use it? (Y) Yes OR (N) No\n",user.premisesID[i]);
+                                    scanf(" %c", &choice);
+
+                                    while(choice != 'Y' && choice != 'y' && choice != 'N' && choice != 'n')
+                                    {
+                                        printf(bold_start"\n-Invalid Response-\n"bold_end);
+                                        printf("Would you like to use it? (Y) Yes OR (N) No\n");
+                                        scanf(" %c", &choice);
+                                    }
+
+                                    if(choice == 'Y' || choice == 'y')
+                                    {
+                                        user.meter_reading[i] = temp_lmtr_reading;  
+                                    }
+                                }
+
+                                // Getting new reading
+                                if(id_record_exists == 1 || choice == 'N' || choice == 'n')
+                                {
+                                    printf(underline_start"\nEnter Initial Meter Reading #%d:\n"underline_end,i+1);
+                                    scanf(" %f",&user.meter_reading[i]);
+                                }
                             }
                         }
                         
@@ -2603,6 +2902,17 @@ jump_admin_actions:
     
                         if(send_back_variable == 'Y' || send_back_variable == 'y')
                         {
+                            /*
+                            In the event that a previous user had the ID number we're about to add
+                            fopen and fclose for the customer database would've been executed to prompt
+                            the admin to use the previous meter size and reading. As a result, we need to now
+                            reopen customer database file.
+                            */
+                            if(id_record_exists != 1)
+                            {
+                                customerdbpointer = fopen(customerdatabase,"r"); // attempts to open file in READ mode (r)
+                            }
+
                             //Creating temporary file to make edits
                             strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
                         
@@ -2635,22 +2945,22 @@ jump_admin_actions:
                                         {
                                             clear_stringarray(strtemp);
                                             fputs("\n",temp_pointer);
-                                            snprintf(strtemp,max_e_length,premisesid_prefix"%d: %s\n",a+1,user.premisesID[a]);
+                                            snprintf(strtemp,max_e_length,premisesid_prefix"%d: %s\n",premisesamt+1,user.premisesID[a]);
                                             fputs(strtemp,temp_pointer);
                                             
-                                            snprintf(strtemp,max_e_length,metersize_prefix"%d: %d\n",a+1,user.meter_size[a]);
+                                            snprintf(strtemp,max_e_length,metersize_prefix"%d: %d\n",premisesamt+1,user.meter_size[a]);
                                             fputs(strtemp,temp_pointer);
                                             
-                                            snprintf(strtemp,max_e_length,lastmeter_r_prefix"%d: %.2f\n",a+1,user.meter_reading[a]);
+                                            snprintf(strtemp,max_e_length,lastmeter_r_prefix"%d: %.2f\n",premisesamt+1,user.meter_reading[a]);
                                             fputs(strtemp,temp_pointer);
                                             
-                                            if(i != premises_to_add-1)
+                                            if(a != premises_to_add-1)
                                             {
-                                                fputs("\n",temp_pointer);
+                                                fputs("\n\n",temp_pointer);
                                             }
                                         }
                                         fputs(data_breakpoint,temp_pointer);
-                                        fputs("\n\n",temp_pointer);
+                                        fputs("\n",temp_pointer);
                                     }
                                     else
                                     {
@@ -2867,7 +3177,10 @@ jump_admin_actions:
                             }
                             else if(found_ID == 0 && strstr(str,premisesid_prefix) != NULL)
                             {
-                                premisesamt++;
+                                if(strstr(str,surrender_prefix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
+                                {
+                                    premisesamt++;  
+                                }
                             }
 
                         }
@@ -3004,7 +3317,7 @@ jump_admin_actions:
                     //while duplicate data not found (information provided dosent exist in file checked)
                     // do:
                     {
-                        printf("\n-No Such Customer Exists-\n\n");
+                        printf(bold_start"\n-No Such Customer Exists-\n\n"bold_end);
                         printf(underline_start"Enter new ID to lookup:\n"underline_end);
                         scanf(" %s", user.customerID);
                         strsanitize(user.customerID,0);
@@ -3015,7 +3328,6 @@ jump_admin_actions:
                     printf(bold_start"================== CUSTOMER DATABASE ==================\n\n"bold_end); //Outputting file header
                     
                     loginpointer = fopen(loginfile,"r");
-                    
                     
                     //Resetting values
                     found_ID = 1;
@@ -3063,12 +3375,16 @@ jump_admin_actions:
                         
                         if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
                         {
+                            printf(text_color_end);
                             found_breakpoint = 0;
                         }
 
                         if(strstr(str,premisesid_prefix) != NULL && found_ID == 0 && found_breakpoint != 0)
                         {
-                            premisesamt++;
+                            if(strstr(str,surrender_prefix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
+                            {
+                                premisesamt++;
+                            }
                         }
                         
                         if(found_ID == 0 && strstr(str,data_breakpoint) == NULL)
@@ -3078,9 +3394,27 @@ jump_admin_actions:
                             {
                                 printf(text_red_start"%s"text_color_end,str);
                             }
-                            if(strstr(str,balance_overdue_prefix)!=NULL)
+                            else if(strstr(str,balance_overdue_prefix)!=NULL)
                             {
                                 printf(text_red_start"%s"text_color_end,str);
+                            }
+                            else if(strstr(str,surrender_prefix)!=NULL && strstr(str,premisesid_prefix)!=NULL)
+                            {
+
+                                //Removing surrender prefix from string
+                                int t = strlen(str);
+                                for(int i = 1 ; i<5; i++)
+                                {
+                                    str[t-i] = '\0'; 
+                                }
+
+                                strcat(str," - Surrendered -");
+                                printf(text_red_start"%s\n",str);
+                            }
+                            else if(strstr(str,premisesid_prefix)!=NULL && strstr(str,surrender_prefix)==NULL)
+                            {
+                                printf(text_color_end);
+                                printf("%s",str);
                             }
                             else
                             {
@@ -3352,6 +3686,7 @@ jump_admin_actions:
             fflush(stdin);
             scanf(" %s", user.customerID);
             
+            //Validating customer ID
             while(duplicate_check(user.customerID,customerdatabase,id_prefix) == 2 || get_user_status(user.customerID) != 0)
             //while duplicate data not found (information provided dosent exist in file checked)
             // do:
@@ -3572,15 +3907,15 @@ jump_admin_actions:
 
                         // CALCULATING BILL
                         int class_usage;
-                        float monthly_total;
-                        float early_payment_reduction = 0; // Defaults ot 0% reduction
+                        float monthly_total = 0;
+                        float early_payment_reduction = 0; // Default to 0% reduction
                         float service_charge = 0;
                         float overdue_amt = user.balance_overdue_amt;
                         float total_amount_due = 0;
 
                         monthly_total = 0;
 
-                        // Assigning income class values
+                        // Assigning income class values based on interger value
                         switch (user.incomeclass)
                         {
                             case 1:
@@ -3600,7 +3935,7 @@ jump_admin_actions:
                                 break;
                         }
 
-                        // Assigned service charge based on meter size
+                        // Assigning service charge based on meter size
                         switch (user.meter_size[premises_pick])
                         {
                             case 15:
@@ -3614,7 +3949,7 @@ jump_admin_actions:
                                 break;
                         }
                         
-                        srand(time(NULL)); //Setting random seed to current time (down the second)
+                        srand(time(NULL)); //Setting random seed to current time (down to the second)
 
                         for(int a = 0; a<30; a++)
                         {
@@ -3634,6 +3969,7 @@ jump_admin_actions:
                         {
                             current_consumption  = 0;
                         }
+
                         float water_rate = 0;
                         float sewerage_rate = 0;
 
@@ -3643,12 +3979,12 @@ jump_admin_actions:
                             water_rate = 149.44;
                             sewerage_rate = 172.72;
                         }
-                        else if(current_consumption>=14001 && current_consumption>=27000) // 14,001–27,000 litres 
+                        else if(current_consumption>=14001 && current_consumption<=27000) // 14,001–27,000 litres 
                         {
                             water_rate = 266.15;
                             sewerage_rate = 290.10;
                         }
-                        else if(current_consumption>=27001 && current_consumption>=41000) // 27,001–41,000 litres 
+                        else if(current_consumption>=27001 && current_consumption<=41000) // 27,001–41,000 litres 
                         {
                             water_rate = 290.10;
                             sewerage_rate = 335.06;
@@ -3724,7 +4060,14 @@ jump_admin_actions:
                         printf(" Early Payment Discount                          5%               \t\t  -%.2f \n",total_current_charges*early_payment_reduction);
                         }
                         printf("==================================================================================================\n");
-                        printf(" Total Amount Due                                --               \t\t (%.2f) \n",total_amount_due);
+                        if(total_amount_due<1)
+                        {
+                            printf(" Total Amount Due                                --               \t\t (%.2f) \n",(total_amount_due*0)+0.0);
+                        }
+                        else
+                        {
+                            printf(" Total Amount Due                                --               \t\t (%.2f) \n",total_amount_due);
+                        }
                         printf("==================================================================================================\n");
 
                         fclose(customerdbpointer);
@@ -3834,7 +4177,6 @@ jump_admin_actions:
                                     snprintf(str,max_e_length,due_d_prefix"%02d/%02d/%d\n",date.tm_mon +2,date.tm_mday,date.tm_year + 1900);
                                     fputs(str,billfilepointer);
 
-
                                     snprintf(str,max_e_length,lastmeter_r_prefix" %.2f\n",user.meter_reading[premises_pick]);
                                     fputs(str,billfilepointer);
 
@@ -3865,7 +4207,7 @@ jump_admin_actions:
                                     fputs(data_breakpoint,billfilepointer);
                                     fputs("\n\n",billfilepointer);
 
-                                    printf(bold_start"-User Bill Generated & Stored-\n"bold_end);
+                                    printf(bold_start"-User Bill Generated & Stored-"bold_end);
                                     fclose(billfilepointer);
                                 }
                                 
@@ -4048,7 +4390,14 @@ jump_admin_actions:
                                             }
                                             else if(current_line == balance_tbp_location)
                                             {
-                                                snprintf(strtemp,max_e_length,balance_tbp_prefix"%.2f\n",total_amount_due);
+                                                if(total_amount_due<1)
+                                                {
+                                                    snprintf(strtemp,max_e_length,balance_tbp_prefix"%.2f\n",(total_amount_due*0)+0.0);
+                                                }
+                                                else
+                                                {
+                                                    snprintf(strtemp,max_e_length,balance_tbp_prefix"%.2f\n",total_amount_due);
+                                                }
                                                 fputs(strtemp,temp_pointer);
                                             }
                                             else if(current_line == bill_status_location)
@@ -4106,7 +4455,7 @@ jump_admin_actions:
                                 {
                                     printf(file_open_error);
                                 }
-                                printf(bold_start"-Last Meter Reading/s Updated-\n\n"bold_end);
+                                printf(bold_start"Last Meter Reading/s Updated-\n\n"bold_end);
                             }
 
 
@@ -4132,36 +4481,70 @@ jump_admin_actions:
             break;
             
         case '7': // View Audit Logs
+            char datel[max_length];
+            char time[max_length];
+            char audit_desc[max_e_length];
+            char audit_desc_spaces[max_e_length];
+            char id_desc[max_length];
+            char id_desc_spaces[max_e_length];
+            char user_id[max_length];
 
             auditpointer = fopen(auditfile, "r"); // attempts to open file in READ mode (r)
 
-            fseek(auditpointer,strlen("AUDIT LOGS"),SEEK_SET); //Setting file pointer past header to save a small amount of time
-                    
-            printf(bold_start"================== AUDIT LOGS =================="bold_end); //Outputting file header
+            if(auditpointer!=NULL)
+            {
+                printf(bold_start"========================================= AUDIT LOGS (MM/DD/YY - H/MM) =========================================\n"bold_end); //Outputting file header
 
-            while(fgets(str, max_e_length,auditpointer) != NULL)
-            //Explanation: while fgets isnt at the end of the file, do:
-            {
-                if(strstr( str, data_breakpoint) == NULL)
-                /*Explanation: if "data_breakpoint" (which is ";") is not in current 
-                line then:
-                */
+                current_line = 1;
+                while(fgets(str, max_e_length,auditpointer) != NULL)
+                //Explanation: while fgets isnt at the end of the file, do:
                 {
-                    printf("%s",str);
+                    if(current_line>2) // Skipping file header
+                    {
+                        fscanf(auditpointer,"%s %*s %s %*s %s %*s %s %s",datel,time,audit_desc,id_desc,user_id);
+
+                        //Finding the amount of space needed to keep table "neat"
+                        int space_needed = 50 - strlen(audit_desc);
+                        int space_needed2 = 25 - strlen(id_desc);
+                        
+                        clear_stringarray(audit_desc_spaces);
+                        clear_stringarray(id_desc_spaces);
+
+                        for(int i = 0; i<space_needed; i++)
+                        {
+                            strncat(audit_desc_spaces," ",max_e_length-max_length);
+                        }
+                        for(int i = 0; i<space_needed2; i++)
+                        {
+                            strncat(id_desc_spaces," ",max_e_length-max_length);
+                        }
+
+                        if((strlen(datel) + strlen(time) + strlen(audit_desc)+ strlen(id_desc)) != 0) // If all fields contain contain data, do:
+                        {
+                            printf("  %s - %s | %s%s| %s%s%s\n",datel,time,audit_desc,audit_desc_spaces,id_desc,id_desc_spaces,user_id);
+                        }
+                        else
+                        {
+                            printf("================================================== NO DATA FOUND ===============================================\n");
+                            break;
+                        }
+                    }
+                    current_line++;
                 }
-                else
+                printf(bold_start"================================================================================================================\n"bold_end);
+                    
+                if(debug == 0)
                 {
-                    printf(bold_start"\n================================================\n"bold_end);
+                    printf(bold_start"=========== DEBUG DATA ===========\n"bold_end);
+                    printf("data_breakpoint test: %s\n\n", data_breakpoint);
+                    printf(bold_start"==================================\n\n"bold_end);
                 }
+                fclose(auditpointer);
             }
-                
-            if(debug == 0)
+            else
             {
-                printf(bold_start"=========== DEBUG DATA ===========\n"bold_end);
-                printf("data_breakpoint test: %s\n\n", data_breakpoint);
-                printf(bold_start"==================================\n\n"bold_end);
+                printf(file_open_error);
             }
-            fclose(auditpointer);
             break;
 
         case '0': // Close terminal
@@ -4189,6 +4572,7 @@ void customer_terminal(char *terminal_clear_string, char* id_of_current_account,
     int found_ID = 1; //Default to false
     int found_breakpoint = 1; //Default to false
     int premisesamt;
+    int surrendered_premises_amt;
     char datestr1[max_length] = {0};
     char datestr2[max_length] = {0};
     char hash_card_number[max_length];
@@ -4261,6 +4645,7 @@ jump_customer_actions:
     //Getting user Data
     current_line = 1;
     premisesamt = 0;
+    surrendered_premises_amt = 0;       
 
     loginpointer  = fopen(loginfile,"r"); // Attempts to open file in reading mode (r)
     customerdbpointer = fopen(customerdatabase,"r"); // Attempts to open file in reading mode (r)
@@ -4314,115 +4699,121 @@ jump_customer_actions:
             break;
         }
 
-        //Getting first name
-        if(found_ID == 0 && strstr(str,fname_prefix) != NULL)
-        //IF id has already been found and fname prefix "User First Name: " has been found
-        //Do:
-        {
-            strcpy(user.firstname,str);
-            fname_location = current_line;
-        }
-        //Getting last name
-        else if(found_ID == 0 && strstr(str,lname_prefix) != NULL)
-        {
-            strcpy(user.lastname,str);
-            lname_location = current_line;
-        }
-        //Getting balance overdue amt
-        else if(found_ID == 0 && strstr(str,balance_overdue_prefix) != NULL)
-        {
-            clear_stringarray(strtemp);
-            strcpy(strtemp,str);
-            remove_prefix(strtemp,balance_overdue_prefix);
-            original_user_balance_od_amt = atof(strtemp); // converts income class from str to int
-            cust_balance_overdue_location = current_line;
-        }
-        //Getting account status
-        else if(found_ID == 0 && strstr(str,status_prefix) != NULL)
-        {
-            strcpy(user.status,str);
-            user_status_location = current_line;
-        }
-        //Getting income class
-        else if(found_ID == 0 && strstr(str,income_class_prefix) != NULL)
-        {
-            clear_stringarray(strtemp);
-            strcpy(strtemp,str);
-            remove_prefix(strtemp,income_class_prefix);
-            user.incomeclass = atoi(strtemp); // converts income class from str to int
-            income_class_location = current_line;
-        }
-
-
-        //Getting premises info
-        char final_prefix[max_length];
-        char i_as_string[1]; // i + terminating char "\0"
-        
         if(found_ID == 0)
         {
-            snprintf(i_as_string,12,"%d",i+1); // converts the current value of i to a string and stores it in "i_as_string"
-            // Check for Premises ID
-            if(strstr(str, premisesid_prefix) != NULL)
+            //Getting first name
+            if(strstr(str,fname_prefix) != NULL)
+            //IF id has already been found and fname prefix "User First Name: " has been found
+            //Do:
             {
-                strcpy(user.premisesID[i], str); // Saves line with premises ID prefix
-                premisesID_location[i] = current_line; // Saves line number where premises id was found
-
-                //Assembles prefix for deletion
-                //String stored in "final_prefix" should look like "Premise ID #1: "
-                snprintf(final_prefix,max_length,premisesid_prefix"%d: ",i+1);
-
-                char *ptr = user.premisesID[i];
-
-                if(strstr(ptr,final_prefix)!=NULL)//If string to be deleted is found
-                {
-                    for(int a = 0; a<(strlen(ptr)); a++)
-                    {
-                        *(ptr+a) = *(ptr+(a+(strlen(final_prefix))));
-                    }
-                }
-
-                strsanitize(ptr,0);
-                strcpy(user.premisesID[i],ptr);
-                ptr = NULL;
-                premisesamt++;
-
+                strcpy(user.firstname,str);
+                fname_location = current_line;
             }
-            
-            // Check for Meter Size
-            else if (strstr(str, metersize_prefix) != NULL)
+            //Getting last name
+            else if(strstr(str,lname_prefix) != NULL)
+            {
+                strcpy(user.lastname,str);
+                lname_location = current_line;
+            }
+            //Getting balance overdue amt
+            else if(strstr(str,balance_overdue_prefix) != NULL)
             {
                 clear_stringarray(strtemp);
-                clear_stringarray(strtemp2);
-                clear_stringarray(final_prefix);
-
-                strcpy(strtemp2,metersize_prefix);
                 strcpy(strtemp,str);
-                meter_size_location[i] = current_line;
-
-                //Sanitizing Data retrieved
-                strncpy(final_prefix,strcat(strcat(strtemp2,i_as_string),": "),max_length);
-                remove_prefix(strtemp, final_prefix); // Remove prefix
-                user.meter_size[i] = atoi(strtemp); // Convert to integer
+                remove_prefix(strtemp,balance_overdue_prefix);
+                original_user_balance_od_amt = atof(strtemp); // converts income class from str to int
+                cust_balance_overdue_location = current_line;
             }
-            // Check for Last Meter Reading
-            else if (strstr(str, lastmeter_r_prefix) != NULL)
+            //Getting account status
+            else if(strstr(str,status_prefix) != NULL)
+            {
+                strcpy(user.status,str);
+                user_status_location = current_line;
+            }
+            //Getting income class
+            else if(strstr(str,income_class_prefix) != NULL)
             {
                 clear_stringarray(strtemp);
-                clear_stringarray(strtemp2);
-                clear_stringarray(final_prefix);
-
-                strcpy(strtemp2,lastmeter_r_prefix);
-                strcpy(strtemp, str);
-                last_meter_r_location[i] = current_line;
-
-                //Sanitizing Data retrieved
-                strncpy(final_prefix,strcat(strcat(strtemp2,i_as_string),": "),max_length);
-                remove_prefix(strtemp,final_prefix); // Remove prefix
-                user.meter_reading[i] = strtof(strtemp, NULL); // Convert to float
-                
-                i++; // Increment index after processing all fields for a premise
+                strcpy(strtemp,str);
+                remove_prefix(strtemp,income_class_prefix);
+                user.incomeclass = atoi(strtemp); // converts income class from str to int
+                income_class_location = current_line;
             }
-            
+
+
+            //Getting premises info
+            char final_prefix[max_length];
+            char i_as_string[2]; // i + terminating char "\0"  
+            if(1)
+            {
+                snprintf(i_as_string,12,"%d",i+1); // converts the current value of i to a string and stores it in "i_as_string"
+                // Check for Premises ID
+                if(strstr(str,premisesid_prefix) != NULL)
+                {
+                    strcpy(user.premisesID[i], str); // Saves line with premises ID prefix
+                    premisesID_location[i] = current_line; // Saves line number where premises id was found
+
+                    //Assembles prefix for deletion
+                    //String stored in "final_prefix" should look like "Premise ID #1: "
+                    snprintf(final_prefix,max_length,premisesid_prefix"%d: ",i+1);
+
+                    char *ptr = user.premisesID[i];
+
+                    if(strstr(ptr,final_prefix)!=NULL)//If string to be deleted is found
+                    {
+                        for(int a = 0; a<(strlen(ptr)); a++)
+                        {
+                            *(ptr+a) = *(ptr+(a+(strlen(final_prefix))));
+                        }
+                    }
+
+                    strsanitize(ptr,0);
+                    strcpy(user.premisesID[i],ptr);
+                    ptr = NULL;
+                    premisesamt++;
+
+                    if(strstr(str,surrender_prefix)!=NULL)
+                    {
+                        surrendered_premises_amt++;
+                    }
+
+                }
+                
+                // Check for Meter Size
+                else if (strstr(str, metersize_prefix) != NULL)
+                {
+                    if(strstr(str, "-SR"))
+                    clear_stringarray(final_prefix);
+
+                    strcpy(strtemp2,metersize_prefix);
+                    strcpy(strtemp,str);
+                    meter_size_location[i] = current_line;
+
+                    //Sanitizing Data retrieved
+                    strncpy(final_prefix,strcat(strcat(strtemp2,i_as_string),": "),max_length);
+                    remove_prefix(strtemp, final_prefix); // Remove prefix
+                    user.meter_size[i] = atoi(strtemp); // Convert to integer
+                }
+                // Check for Last Meter Reading
+                else if (strstr(str, lastmeter_r_prefix) != NULL)
+                {
+                    clear_stringarray(strtemp);
+                    clear_stringarray(strtemp2);
+                    clear_stringarray(final_prefix);
+
+                    strcpy(strtemp2,lastmeter_r_prefix);
+                    strcpy(strtemp, str);
+                    last_meter_r_location[i] = current_line;
+
+                    //Sanitizing Data retrieved
+                    strncpy(final_prefix,strcat(strcat(strtemp2,i_as_string),": "),max_length);
+                    remove_prefix(strtemp,final_prefix); // Remove prefix
+                    user.meter_reading[i] = strtof(strtemp, NULL); // Convert to float
+                    
+                    i++; // Increment index after processing all fields for a premise
+                }
+                
+            }
         }
         current_line++;
     }
@@ -4520,8 +4911,6 @@ jump_customer_actions:
         {
             printf("Found Breakpoint: TRUE\n");
         }
-
-        printf("Premises amount: %d\n",premisesamt);   
 
         //Printing Premises data
         if(premisesamt>0) // If premises were found
@@ -4710,21 +5099,21 @@ jump_customer_actions:
     }
     else
     {
-        printf("(1) - Register New Payment Card (%d slots available)\n",max_card_amt-registered_card_amt);
+        printf("(1) - Register New Payment Card (%d slot/s available)\n",max_card_amt-registered_card_amt);
     }
     
     printf("(2) - Pay Bill\n");
     printf("(3) - View Previous Bills\n");
-    //printf("(4) - Surrender Meter\n");
+    printf("(4) - Surrender Meter\n");
     printf("(0) - Logout\n");
 
     scanf(" %d", &action);
 
     switch(action)
     {
-        case 1:
-
-            if(registered_card_amt == 3)
+        case 1: // Registering payment card
+            // Verification check if user has max amount of registered cards
+            if(registered_card_amt >= 3)
             {
                 printf(text_red_start"\n-You have reached the maximum amount of cards per account-\n"text_color_end);
                 printf("\nWhen you're done enter (X):\n");
@@ -4734,145 +5123,148 @@ jump_customer_actions:
                 {
                     goto jump_customer_actions;
                 }                
-            }
+            } 
 
-            system(terminal_clear_string); // Clears command line UI
-
-            printf(bold_start"================== CUSTOMER TERMINAL ==================\n\n"bold_end); //Outputting file header
-
-            cardfilepointer = fopen(paymentcardfile,"a+"); // attempts to open file in APPEND & READING mode (a+)
-
-            // GETTING CARD NUMBER
-            printf(underline_start"Enter card number ( %d digits ):\n"underline_end,max_card_length);
-            scanf(" %s",user.card_number[0]);
-
-            //Validation checks
-            while(strlen(user.card_number[0]) != max_card_length || strhchar(user.card_number[0]) != 1)
-            {
-                if(strhchar(user.card_number[0]) != 1)
-                // While user input has a character in it, do:
-                {
-                    printf(bold_start"\n-Card number should only contain numbers-\n"bold_end);
-                    printf(underline_start"\nEnter VALID card number:\n"underline_end);
-                    scanf(" %s",user.card_number[0]);
-                }
-                else if(strlen(user.card_number[0]) != max_card_length)
-                {
-                    printf(bold_start"\n-Card number should be %d digits long-\n"bold_end,max_card_length);
-                    printf(underline_start"\nEnter card number of %d digits:\n"underline_end,max_card_length);
-                    scanf(" %s",user.card_number[0]);
-                }
-            }
-
-            // After card number is entered, check if it already exists in the database
-            // If it does, prompt the user to return to customer main menu to try again  
-            clear_stringarray(strtemp);
-            hash_djb2(user.card_number[0],strtemp);
-
-            while(fgets(str,max_e_length,cardfilepointer) != NULL)
-            {
-                if(current_line>1)
-                {
-                    if(strstr(str,id_of_current_account) != NULL && strstr(str,strtemp))
-                    //If id of user & card # is found under the same record, do:
-                    {
-                        printf(bold_start"\n-Card number already used by current account-\n"bold_end);
-
-                        printf("\nWhen you're done enter (X):\n");
-                        scanf(" %c", &send_back_variable);
-                    
-                        if(send_back_variable == 'X' || send_back_variable == 'x')
-                        {
-                            goto jump_customer_actions;
-                        }    
-                        break;
-                    }
-                }
-                current_line++; 
-            }
-
-            // GETTING CVV NUMBER 
-            printf(underline_start"\nEnter CVV number ( %d digits ):\n"underline_end,max_cvv_length);
-            scanf(" %s",user.cvv[0]);
-
-            //Validation checks
-            while(strlen(user.cvv[0]) != max_cvv_length || strhchar(user.cvv[0]) != 1)
-            {
-                if(strhchar(user.cvv[0]) != 1)
-                // While user input has a character in it, do:
-                {
-                    printf(bold_start"\n-CVV number should only contain numbers-\n"bold_end);
-                    printf(underline_start"\nEnter VALID CVV number:\n"underline_end);
-                    scanf(" %s",user.cvv[0]);
-                }
-                else if(strlen(user.cvv[0]) != max_cvv_length)
-                {
-                    printf(bold_start"\n-CVV number should be %d digits long-\n"bold_end,max_cvv_length);
-                    printf(underline_start"\nEnter CVV number of %d digits:\n"underline_end,max_cvv_length);
-                    scanf(" %s",user.cvv[0]);
-                }
-            }
-
-            // GETTING EXPIRY DATE
-            int temp_date = 47021;
-            printf(underline_start"\nEnter card expiry date ( M/YYYY ):\n"underline_end);
-            printf("example: 12033 - ( January 2033 ):\n");
-            scanf("%d",&temp_date);
-            
-            //Validation checks
-            while(temp_date/10000 > 12 || temp_date/10000 < 1 || temp_date%10000 < date.tm_year + 1900)
-            // While month is greater than 12 OR less than 1 OR year is less than current year, do:
-            {
-                if(temp_date/10000 > 12 || temp_date/10000 < 1)
-                {
-                    printf(bold_start"\n-Card expiry month should be between 1 and 12-\n"bold_end);
-                    printf(underline_start"\nEnter card expiry date ( M/YYYY ):\n"underline_end);
-                    printf("example: 12033 - ( January 2033 ):\n");
-                    scanf("%d",&temp_date);
-                }
-                else if(temp_date%10000 < date.tm_year + 1900)
-                {
-                    printf(bold_start"\n-Card expiry year should be greater than current year-\n"bold_end);
-                    printf(underline_start"\nEnter card expiry date ( M/YYYY ):\n"underline_end);
-                    printf("example: 12033 - ( January 2033 ):\n");
-                    scanf("%d",&temp_date);
-                }
-            }
-
-            user.card_exp_date.month[0] = temp_date/10000; // Gets month from user input
-            user.card_exp_date.year[0] = temp_date%10000;  // Gets year from user input
-
-            hash_djb2(user.card_number[0],hash_card_number);
-            hash_djb2(user.cvv[0],hash_cvv);
-            
-            if(debug == 0)
-            {
-                printf(bold_start"=========== DEBUG DATA ===========\n"bold_end);
-                printf("Card Number: %s\n",user.card_number[0]);
-                printf("Card Number Hash: %s\n",hash_card_number);
-                printf("CVV Number: %s\n",user.cvv[0]);
-                printf("CVV Hash: %s\n",hash_cvv);
-                printf("Card Expiry Month: %d\n",user.card_exp_date.month[0]);
-                printf("Card Expiry Year: %d\n",user.card_exp_date.year[0]);
-                printf(bold_start"==================================\n"bold_end);
-            }
-
-            if(cardfilepointer != NULL)
-            {
-                fprintf(cardfilepointer, "%s\t\t%s\t\t%s\t\t\t%d\t\t\t\t%d\n", id_of_current_account, hash_card_number, hash_cvv, user.card_exp_date.month[0], user.card_exp_date.year[0]);
-                printf(bold_start"\n-Card Registered-\n"bold_end);
-                fclose(cardfilepointer);
-            }
+            // If registered card for user found, do:
             else
             {
-                printf(file_open_error);
-            }
+                system(terminal_clear_string); // Clears command line UI
 
+                printf(bold_start"================== CUSTOMER TERMINAL ==================\n\n"bold_end); //Outputting file header
+
+                cardfilepointer = fopen(paymentcardfile,"a+"); // attempts to open file in APPEND & READING mode (a+)
+
+                // GETTING CARD NUMBER
+                printf(underline_start"Enter card number ( %d digits ):\n"underline_end,max_card_length);
+                scanf(" %s",user.card_number[0]);
+
+                //Validation checks
+                while(strlen(user.card_number[0]) != max_card_length || strhchar(user.card_number[0]) != 1)
+                {
+                    if(strhchar(user.card_number[0]) != 1)
+                    // While user input has a character in it, do:
+                    {
+                        printf(bold_start"\n-Card number should only contain numbers-\n"bold_end);
+                        printf(underline_start"\nEnter VALID card number:\n"underline_end);
+                        scanf(" %s",user.card_number[0]);
+                    }
+                    else if(strlen(user.card_number[0]) != max_card_length)
+                    {
+                        printf(bold_start"\n-Card number should be %d digits long-\n"bold_end,max_card_length);
+                        printf(underline_start"\nEnter card number of %d digits:\n"underline_end,max_card_length);
+                        scanf(" %s",user.card_number[0]);
+                    }
+                }
+
+                // After card number is entered, check if it already exists in the database
+                // If it does, prompt the user to return to customer main menu to try again  
+                clear_stringarray(strtemp);
+                hash_djb2(user.card_number[0],strtemp);
+
+                //Validation checks ( if card number is already in use by current account)
+                while(fgets(str,max_e_length,cardfilepointer) != NULL)
+                {
+                    if(current_line>1)
+                    {
+                        if(strstr(str,id_of_current_account) != NULL && strstr(str,strtemp))
+                        //If id of user & card # is found under the same record, do:
+                        {
+                            printf(bold_start"\n-Card number already used by current account-\n"bold_end);
+
+                            printf("\nWhen you're done enter (X):\n");
+                            scanf(" %c", &send_back_variable);
+                        
+                            if(send_back_variable == 'X' || send_back_variable == 'x')
+                            {
+                                goto jump_customer_actions;
+                            }    
+                            break;
+                        }
+                    }
+                    current_line++; 
+                }
+
+                // GETTING CVV NUMBER 
+                printf(underline_start"\nEnter CVV number ( %d digits ):\n"underline_end,max_cvv_length);
+                scanf(" %s",user.cvv[0]);
+
+                //Validation checks
+                while(strlen(user.cvv[0]) != max_cvv_length || strhchar(user.cvv[0]) != 1)
+                {
+                    if(strhchar(user.cvv[0]) != 1)
+                    // While user input has a character in it, do:
+                    {
+                        printf(bold_start"\n-CVV number should only contain numbers-\n"bold_end);
+                        printf(underline_start"\nEnter VALID CVV number:\n"underline_end);
+                        scanf(" %s",user.cvv[0]);
+                    }
+                    else if(strlen(user.cvv[0]) != max_cvv_length)
+                    {
+                        printf(bold_start"\n-CVV number should be %d digits long-\n"bold_end,max_cvv_length);
+                        printf(underline_start"\nEnter CVV number of %d digits:\n"underline_end,max_cvv_length);
+                        scanf(" %s",user.cvv[0]);
+                    }
+                }
+
+                // GETTING EXPIRY DATE
+                int temp_date = 47021;
+                printf(underline_start"\nEnter card expiry date ( M/YYYY ):\n"underline_end);
+                printf("example: 12033 - ( January 2033 ):\n");
+                scanf("%d",&temp_date);
+                
+                //Validation checks
+                while(temp_date/10000 > 12 || temp_date/10000 < 1 || temp_date%10000 < date.tm_year + 1900)
+                // While month is greater than 12 OR less than 1 OR year is less than current year, do:
+                {
+                    if(temp_date/10000 > 12 || temp_date/10000 < 1)
+                    {
+                        printf(bold_start"\n-Card expiry month should be between 1 and 12-\n"bold_end);
+                        printf(underline_start"\nEnter card expiry date ( M/YYYY ):\n"underline_end);
+                        printf("example: 12033 - ( January 2033 ):\n");
+                        scanf("%d",&temp_date);
+                    }
+                    else if(temp_date%10000 < date.tm_year + 1900)
+                    {
+                        printf(bold_start"\n-Card expiry year should be greater than current year-\n"bold_end);
+                        printf(underline_start"\nEnter card expiry date ( M/YYYY ):\n"underline_end);
+                        printf("example: 12033 - ( January 2033 ):\n");
+                        scanf("%d",&temp_date);
+                    }
+                }
+
+                user.card_exp_date.month[0] = temp_date/10000; // Gets month from user input
+                user.card_exp_date.year[0] = temp_date%10000;  // Gets year from user input
+
+                hash_djb2(user.card_number[0],hash_card_number);
+                hash_djb2(user.cvv[0],hash_cvv);
+                
+                if(debug == 0)
+                {
+                    printf(bold_start"=========== DEBUG DATA ===========\n"bold_end);
+                    printf("Card Number: %s\n",user.card_number[0]);
+                    printf("Card Number Hash: %s\n",hash_card_number);
+                    printf("CVV Number: %s\n",user.cvv[0]);
+                    printf("CVV Hash: %s\n",hash_cvv);
+                    printf("Card Expiry Month: %d\n",user.card_exp_date.month[0]);
+                    printf("Card Expiry Year: %d\n",user.card_exp_date.year[0]);
+                    printf(bold_start"==================================\n"bold_end);
+                }
+
+                if(cardfilepointer != NULL)
+                {
+                    fprintf(cardfilepointer, "%s\t\t%s\t\t%s\t\t\t%d\t\t\t\t%d\n", id_of_current_account, hash_card_number, hash_cvv, user.card_exp_date.month[0], user.card_exp_date.year[0]);
+                    printf(bold_start"\n-Card Registered-\n"bold_end);
+                    fclose(cardfilepointer);
+                }
+                else
+                {
+                    printf(file_open_error);
+                }
+            }
             break;
 
         case 2: // Pay Bill
-
-            if(premisesamt>0)
+            if(premisesamt-surrendered_premises_amt>0)
             {
                 // Checking if user has registered payment options
                 cardfilepointer = fopen(paymentcardfile,"r"); // attempts to open file in READ mode (r)
@@ -4904,334 +5296,272 @@ jump_customer_actions:
                     }    
     
                 }
-
-                // If uuser has registered payment options, do:
-
-                system(terminal_clear_string);
-                printf(bold_start"======================================== BILLING TERMINAL ========================================\n"bold_end); //Outputting file header
-                
-                //Printing Owned Premises
-                printf(bold_start"\nPREMISES OWNED %d\n"bold_end,premisesamt);
-                for(i = 0; i < premisesamt; i++)
+                // If user has registered payment options, do:
+                else
                 {
-                    printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
-                    printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
-                    printf(lastmeter_r_prefix"%d: %.2f",i+1, user.meter_reading[i]); 
-                        
-                    //Prevents double line space at the end of user record
-                    if(i != premisesamt-1)
+                    system(terminal_clear_string);
+                    printf(bold_start"======================================== BILLING TERMINAL ========================================\n"bold_end); //Outputting file header
+                    
+                    //Printing Owned Premises
+                    printf(bold_start"\nPREMISES OWNED %d\n"bold_end,premisesamt-surrendered_premises_amt);
+                    for(i = 0; i < premisesamt; i++)
                     {
-                        printf("\n\n"); 
-                    }
-                    else
-                    {
-                        printf("\n"); 
-                    }                      
-                }
-
-                int premises_pick;
-                printf(underline_start"\nPick premises # to view bill:\n"underline_end);
-                scanf(" %d" , &premises_pick);
-
-                while(premises_pick > premisesamt || premises_pick <= 0)
-                {
-                    printf(bold_start"\n-Customer owns no such premises-\n"bold_end);
-                    printf(underline_start"\nPick premises # to view bill:\n"underline_end);
-                    scanf(" %d" , &premises_pick);  
-                }
-
-                premises_pick--; // Decrement so that the number matches actual index values
-
-                billfilepointer = fopen(billfile,"r");
-
-                // GETTING BILL INFO
-                if(billfilepointer != NULL)
-                {
-                    found_breakpoint = 1; //Setting found breakpoint ";" back to false
-                    found_ID = 1; //Setting found ID back to false
-
-                    current_line = 1;
-                    while(fgets(str,max_e_length,billfilepointer) != NULL && found_breakpoint != 0)
-                    {
-                        if(strstr(str,premisesid_prefix)!= NULL && strstr(str,user.premisesID[premises_pick])!= NULL) //If ID for premises is found
+                        if(strstr(user.premisesID[i],surrender_prefix)==NULL) // Premises being looked at is not surrendered, do:
                         {
-                            found_ID = 0;
-                        }
-                
-                        if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
-                        {
-                            found_breakpoint = 0;   
-                            break;
-                        }
-                
-                        if(found_ID == 0)
-                        {
-                            if(strstr(str,date_of_i_prefix) != NULL)
+                            printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
+                            printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
+                            printf(lastmeter_r_prefix"%d: %.2f",i+1, user.meter_reading[i]); 
+                                
+                            //Prevents double line space at the end of user record
+                            if(i != premisesamt-1)
                             {
-                                remove_prefix(str,date_of_i_prefix);
-                                strsanitize(str,0);
-                                strcpy(datestr1,str);
+                                printf("\n\n"); 
                             }
-                            else if(strstr(str,due_d_prefix) != NULL)
+                            else
                             {
-                                remove_prefix(str,due_d_prefix);
-                                strsanitize(str,0);
-                                strcpy(datestr2,str);
-                            }
-                            else if(strstr(str,lastmeter_r_prefix) != NULL)
-                            {
-                                remove_prefix(str,lastmeter_r_prefix" ");
-                                user.meter_reading[premises_pick] = atof(str);
-                            }
-                            else if(strstr(str,current_meter_r_prefix) != NULL)
-                            {
-                                remove_prefix(str,current_meter_r_prefix);
-                                monthly_total = atof(str);
-                            }
-                            else if(strstr(str,water_r_prefix) != NULL)
-                            {
-                                remove_prefix(str,water_r_prefix);
-                                water_rate = atof(str);
-                            }
-                            else if(strstr(str,sewerage_r_prefix) != NULL)
-                            {
-                                remove_prefix(str,sewerage_r_prefix);
-                                sewerage_rate = atof(str);
-                            }
-                            else if(strstr(str,service_c_prefix) != NULL)
-                            {
-                                remove_prefix(str,service_c_prefix);
-                                service_charge = atof(str);
-                            }
-                            else if(strstr(str,early_pr_prefix) != NULL)
-                            {
-                                remove_prefix(str,early_pr_prefix);
-                                early_payment_reduction = atof(str);
-                            }
-                            else if(strstr(str,balance_overdue_prefix) != NULL)
-                            {
-                                remove_prefix(str,balance_overdue_prefix);
-                                user.balance_overdue_amt = atof(str);
-                                balance_overdue_location = current_line;
-                            }
-                            else if(strstr(str,balance_tbp_prefix) != NULL)
-                            {
-                                remove_prefix(str,balance_tbp_prefix);
-                                bill_amt_to_pay = atof(str);
-                                bill_balance_tbp_location = current_line;
-                            }
-                            else if(strstr(str,bill_status_prefix) != NULL)
-                            {
-                                remove_prefix(str,bill_status_prefix);
-                                bill_status = atoi(str);
-                                bill_status_location = current_line;
+                                printf("\n"); 
                             } 
                         }
-                        current_line++;
+                        else
+                        {
+                            continue;
+                        }                   
                     }
-                    fclose(billfilepointer);
 
-                    if(found_ID != 1) // If requested premises has log in billing database
+                    int premises_pick;
+                    printf(underline_start"\nPick premises # to pay bill:\n"underline_end);
+                    scanf(" %d" , &premises_pick);
+
+                    while(premises_pick > premisesamt || premises_pick <= 0 || strstr(user.premisesID[premises_pick-1],surrender_prefix)!=NULL)
                     {
-                        ///Reassembling bill values
-                        current_consumption = monthly_total - user.meter_reading[premises_pick];
-                        if(current_consumption<0)
+                        printf(bold_start"\n-Customer owns no such premises-\n"bold_end);
+                        printf(underline_start"\nPick premises # to view bill:\n"underline_end);
+                        scanf(" %d" , &premises_pick);  
+                    }
+
+                    premises_pick--; // Decrement so that the number matches actual index values
+
+                    billfilepointer = fopen(billfile,"r");
+
+                    // BILL PROCESSING
+                    if(billfilepointer != NULL)
+                    {
+                        found_breakpoint = 1; //Setting found breakpoint ";" back to false
+                        found_ID = 1; //Setting found ID back to false
+
+                        // GETTING BILL INFO
+                        current_line = 1;
+                        while(fgets(str,max_e_length,billfilepointer) != NULL && found_breakpoint != 0)
                         {
-                            current_consumption = 0;
-                        }
-                        water_charge = current_consumption * water_rate;
-                        sewerage_charge = current_consumption * sewerage_rate;
-                        PAM /*Price Adjustment Mechanism*/ = .0121 * (water_charge + sewerage_charge + service_charge);
-                        x_factor = .05 * (water_charge + sewerage_charge + service_charge);
-                        k_factor = .20 * (water_charge + sewerage_charge + service_charge + PAM);
-                        total_current_charges = (water_charge + sewerage_charge + service_charge) - (x_factor + k_factor);
-                        total_amount_due = (total_current_charges  - (total_current_charges*early_payment_reduction)) + user.balance_overdue_amt;
-                        
-
-
-                        if(1) // Printing bill empty if statement for organization
-                        {
-                            system(terminal_clear_string);
-                            printf("==================================================================================================\n");
-                            printf(bold_start" WATER BILL, ISSUED TO: %s %s | FROM: NATIONAL WATER COMISSION\n"bold_end,user.firstname,user.lastname);
-                            printf(" Date of Issue: %s       | Due Date: %s\n",datestr1,datestr2);
-                            printf(" Premises ID: %s\n",user.premisesID[premises_pick]);
-                            printf(" Previous meter reading: %.2fL  | Current meter reading: %.2fL | Current consumption: %.2fL\n",user.meter_reading[premises_pick],monthly_total,current_consumption);
-                            printf("==================================================================================================\n");
-                            printf("        Description                             Rate              \t\t Subtotal \t\n");
-                            printf("==================================================================================================\n");
-                            printf(" Water Charge                                  %.2f               \t\t  %.2f \n",water_rate,water_charge);
-                            printf(" Sewerage Charge                               %.2f               \t\t  %.2f \n",sewerage_rate,sewerage_charge);
-                            printf(" Meter Service Charge (%dmm)                   %.2f               \t\t  %.2f \n",user.meter_size[premises_pick],service_charge,service_charge);
-                            printf(" X factor                                       5%                \t\t  %.2f \n",x_factor);
-                            printf(" Price Adjustment Mechanism                    1.21%              \t\t  %.2f \n",PAM);
-                            printf(" K factor                                       20%               \t\t  %.2f \n",k_factor);
-                            printf("__________________________________________________________________________________________________\n");
-                            printf(" Total Current Charges                           --               \t\t  %.2f \n",total_current_charges);
-                            if(user.balance_overdue_amt >= 0)
+                            if(strstr(str,premisesid_prefix)!= NULL && strstr(str,user.premisesID[premises_pick])!= NULL) //If ID for premises is found
                             {
-                            printf(" Balance Carried Over                            --               \t\t  %.2f \n",user.balance_overdue_amt);
+                                found_ID = 0;
                             }
-                            else
-                            {
-                            printf(" Balance Carried Over                            --               \t\t  %.2f \n",user.balance_overdue_amt-total_amount_due);
-                            }
-                            if(early_payment_reduction > 0)
-                            {
-                            printf(" Early Payment Discount                          5%               \t\t  -%.2f \n",total_current_charges*early_payment_reduction);
-                            }
-                            printf("==================================================================================================\n");
-                            printf(" Total Amount Due                                --               \t\t (%.2f) \n",total_amount_due);
-                            printf("==================================================================================================\n");
-                            printf(" Balance left to be paid                         --               \t\t (%.2f) \n",bill_amt_to_pay);
-                            printf("==================================================================================================\n");
-                        }
-
-                        if(debug == 0)
-                        {
-                            printf(bold_start"=========== DEBUG DATA ===========\n"bold_end);
-                            printf(bold_start"PREMISES #%d\n"bold_end,premises_pick+1);
-                            printf("Previous meter reading: %.2f\n",user.meter_reading[premises_pick]);
-                            printf("line location: %lu\n",last_meter_r_location[premises_pick]);
-                            printf("Current meter reading: %.2f\n",monthly_total);
-                            printf("line location: %lu\n",current_meter_r_location);
-                            printf("Current consumption: %.2f\n",current_consumption);
-                            printf("Water Charge: %.2f\n",water_charge);
-                            printf("Sewerage Charge: %.2f\n",sewerage_charge);
-                            printf("Service Charge: %.2f\n",service_charge);
-                            printf("line location: %lu\n",service_c_location);
-                            printf("PAM (Price Adjustment Mechanism): %.2f\n",PAM);
-                            printf("X-Factor: %.2f\n",x_factor);
-                            printf("K-Factor: %.2f\n",k_factor);
-                            printf("Total Current Charges: %.2f\n",total_current_charges);
-                            printf("Balance Overdue: %.2f\n",user.balance_overdue_amt);
-                            printf("line location (billing logs): %lu\n",balance_overdue_location);
-                            printf("line location (customer database): %lu\n",cust_balance_overdue_location);
-                            printf("Balance To Be Paid: %.2f\n",bill_amt_to_pay);
-                            printf("line location: %lu\n",bill_balance_tbp_location);
-                            printf("Total Amount Due: %.2f\n",total_amount_due);
-                            if(early_payment_reduction == 0)
-                            {
-                                printf("Early Payment Reduction: NOT eligible\n");
-                            }
-                            else
-                            {
-                                printf("Early Payment Reduction: Eligible\n");
-                                
-                            }
-                            printf(bold_start"==================================\n"bold_end);
-                        }
-
-                        i = 0;
-                        if(bill_status == 0) // If bill has been paid
-                        {
-                            printf(bold_start"\nTHIS BILL HAS BEEN PAID\n"bold_end);
-
-                            printf("\nWhen you're done enter (X):\n");
-                            scanf(" %c", &send_back_variable);
-                        
-                            if(send_back_variable == 'X' || send_back_variable == 'x')
-                            {
-                                goto jump_customer_actions;
-                            }
-
-                        }
-
-                        while(choice != '1' && choice != '2' && choice != '0')
-                        {
-                            if(i>0)
-                            {
-                                printf(bold_start"\n-Invalid Option-\n"bold_end);
-                            }
-                            printf(bold_start"\nOptions:\n"bold_end);
-                            printf("(1) - Pay in Full\n(2) - Pay in Partials\n(0) - Return to Menu\n");
-                            scanf(" %c", &choice);
-                            i++;
-                        }
-
-                        if(choice == '0')
-                        {
-                            goto jump_customer_actions;
-                        }
-                        else if(choice == '1') // Full Payment
-                        {
-                            customerdbpointer = fopen(customerdatabase,"r"); // Attempts to open file in read mode (r)
-
-                            //Creating temporary file to make edits
-                            clear_stringarray(filename_temp);
-                            strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
-                        
-                            int a = 0;
-                            for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
-                            {
-                                if(a<2)
-                                {
-                                    filename_temp[strlen(filename_temp)-(b+a)] = '\0';
-                                    a++;            
-                                }
-                            }
-                            strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
-                            strcat(filename_temp,".txt"); // Adds back .txt to file name
-                        
-                            temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
-                            //Temporary file now created
-                        
-                            fseek(customerdbpointer,0,SEEK_SET); //Resests pointer to start of file
                     
-                            // Updating balance overdue to show account is fully paid
-                            if(temp_pointer != NULL && customerdbpointer != NULL) // If both files open successfully, do:
+                            if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
                             {
-                                current_line = 1;
-                                while(fgets(str,max_e_length,customerdbpointer)!=NULL)
+                                found_breakpoint = 0;   
+                                break;
+                            }
+                    
+                            if(found_ID == 0)
+                            {
+                                if(strstr(str,date_of_i_prefix) != NULL)
                                 {
-                                    if(current_line == cust_balance_overdue_location)
-                                    {
-                                        clear_stringarray(strtemp);
-                                        if(debug == 0)
-                                        {
-                                            printf("\nCUSTOMER BALANCE OVERDUE, EDITED\n");
-                                        }
-                                        snprintf(strtemp,max_e_length,balance_overdue_prefix"%.2f\n",original_user_balance_od_amt-total_amount_due);
-                                        fputs(strtemp,temp_pointer);
-                                    }
-                                    else
-                                    {
-                                        fputs(str,temp_pointer);
-                                    }
-                                    current_line++;
+                                    remove_prefix(str,date_of_i_prefix);
+                                    strsanitize(str,0);
+                                    strcpy(datestr1,str);
                                 }
-                            
-                                fclose(customerdbpointer);
-                                fclose(temp_pointer);
-                                clear_stringarray(str);
-                                clear_stringarray(strtemp);
-                        
-                                if(remove(customerdatabase) != 0)
+                                else if(strstr(str,due_d_prefix) != NULL)
                                 {
-                                    if(debug == 0)
-                                    {
-                                        perror("\nError msg");
-                                        printf(bold_start"\n-Failed to Remove File-\n"bold_end);
-                                    }
-                                }  
-                                else if(rename(filename_temp,customerdatabase) != 0)
-                                {
-                                    if(debug == 0)
-                                    {
-                                        perror("\nError msg");
-                                        printf(bold_start"\n-Failed to Replace File-\n"bold_end);
-                                    }
+                                    remove_prefix(str,due_d_prefix);
+                                    strsanitize(str,0);
+                                    strcpy(datestr2,str);
                                 }
+                                else if(strstr(str,lastmeter_r_prefix) != NULL)
+                                {
+                                    remove_prefix(str,lastmeter_r_prefix" ");
+                                    user.meter_reading[premises_pick] = atof(str);
+                                }
+                                else if(strstr(str,current_meter_r_prefix) != NULL)
+                                {
+                                    remove_prefix(str,current_meter_r_prefix);
+                                    monthly_total = atof(str);
+                                }
+                                else if(strstr(str,water_r_prefix) != NULL)
+                                {
+                                    remove_prefix(str,water_r_prefix);
+                                    water_rate = atof(str);
+                                }
+                                else if(strstr(str,sewerage_r_prefix) != NULL)
+                                {
+                                    remove_prefix(str,sewerage_r_prefix);
+                                    sewerage_rate = atof(str);
+                                }
+                                else if(strstr(str,service_c_prefix) != NULL)
+                                {
+                                    remove_prefix(str,service_c_prefix);
+                                    service_charge = atof(str);
+                                }
+                                else if(strstr(str,early_pr_prefix) != NULL)
+                                {
+                                    remove_prefix(str,early_pr_prefix);
+                                    early_payment_reduction = atof(str);
+                                }
+                                else if(strstr(str,balance_overdue_prefix) != NULL)
+                                {
+                                    remove_prefix(str,balance_overdue_prefix);
+                                    user.balance_overdue_amt = atof(str);
+                                    balance_overdue_location = current_line;
+                                }
+                                else if(strstr(str,balance_tbp_prefix) != NULL)
+                                {
+                                    remove_prefix(str,balance_tbp_prefix);
+                                    bill_amt_to_pay = atof(str);
+                                    bill_balance_tbp_location = current_line;
+                                }
+                                else if(strstr(str,bill_status_prefix) != NULL)
+                                {
+                                    remove_prefix(str,bill_status_prefix);
+                                    bill_status = atoi(str);
+                                    bill_status_location = current_line;
+                                } 
+                            }
+                            current_line++;
+                        }
+                        fclose(billfilepointer);
 
-                                // If balance was successfully changed to paid, then update bill status & amount to 0 (FULLY PAID)
+                        // If requested premises has log in billing database that hasnt been paid
+                        if(found_ID != 1 && bill_status != 0) 
+                        {
+                            ///Reassembling bill values
+                            current_consumption = monthly_total - user.meter_reading[premises_pick];
+                            if(current_consumption<0)
+                            {
+                                current_consumption = 0;
+                            }
+                            water_charge = current_consumption * water_rate;
+                            sewerage_charge = current_consumption * sewerage_rate;
+                            PAM /*Price Adjustment Mechanism*/ = .0121 * (water_charge + sewerage_charge + service_charge);
+                            x_factor = .05 * (water_charge + sewerage_charge + service_charge);
+                            k_factor = .20 * (water_charge + sewerage_charge + service_charge + PAM);
+                            total_current_charges = (water_charge + sewerage_charge + service_charge) - (x_factor + k_factor);
+                            total_amount_due = (total_current_charges  - (total_current_charges*early_payment_reduction)) + user.balance_overdue_amt;
+                            
+
+
+                            if(1) // Printing bill, empty if statement for organization
+                            {
+                                system(terminal_clear_string);
+                                printf("==================================================================================================\n");
+                                printf(bold_start" WATER BILL, ISSUED TO: %s %s | FROM: NATIONAL WATER COMISSION\n"bold_end,user.firstname,user.lastname);
+                                printf(" Date of Issue: %s       | Due Date: %s\n",datestr1,datestr2);
+                                printf(" Premises ID: %s\n",user.premisesID[premises_pick]);
+                                printf(" Previous meter reading: %.2fL  | Current meter reading: %.2fL | Current consumption: %.2fL\n",user.meter_reading[premises_pick],monthly_total,current_consumption);
+                                printf("==================================================================================================\n");
+                                printf("        Description                             Rate              \t\t Subtotal \t\n");
+                                printf("==================================================================================================\n");
+                                printf(" Water Charge                                  %.2f               \t\t  %.2f \n",water_rate,water_charge);
+                                printf(" Sewerage Charge                               %.2f               \t\t  %.2f \n",sewerage_rate,sewerage_charge);
+                                printf(" Meter Service Charge (%dmm)                   %.2f               \t\t  %.2f \n",user.meter_size[premises_pick],service_charge,service_charge);
+                                printf(" X factor                                       5%                \t\t  %.2f \n",x_factor);
+                                printf(" Price Adjustment Mechanism                    1.21%              \t\t  %.2f \n",PAM);
+                                printf(" K factor                                       20%               \t\t  %.2f \n",k_factor);
+                                printf("__________________________________________________________________________________________________\n");
+                                printf(" Total Current Charges                           --               \t\t  %.2f \n",total_current_charges);
+                                if(user.balance_overdue_amt >= 0)
+                                {
+                                printf(" Balance Carried Over                            --               \t\t  %.2f \n",user.balance_overdue_amt);
+                                }
                                 else
                                 {
-                                    billfilepointer = fopen(billfile,"r"); // Attempts to open file in read mode (r)
+                                printf(" Balance Carried Over                            --               \t\t  %.2f \n",user.balance_overdue_amt-total_amount_due);
+                                }
+                                if(early_payment_reduction > 0)
+                                {
+                                printf(" Early Payment Discount                          5%               \t\t  -%.2f \n",total_current_charges*early_payment_reduction);
+                                }
+                                printf("==================================================================================================\n");
+                                printf(" Total Amount Due                                --               \t\t (%.2f) \n",total_amount_due);
+                                printf("==================================================================================================\n");
+                                printf(" Balance left to be paid                         --               \t\t (%.2f) \n",bill_amt_to_pay);
+                                printf("==================================================================================================\n");
+                            }
 
-                                    //CHANGING PASSWORD
+                            if(debug == 0)
+                            {
+                                printf(bold_start"=========== DEBUG DATA ===========\n"bold_end);
+                                printf(bold_start"PREMISES #%d\n"bold_end,premises_pick+1);
+                                printf("Previous meter reading: %.2f\n",user.meter_reading[premises_pick]);
+                                printf("line location: %lu\n",last_meter_r_location[premises_pick]);
+                                printf("Current meter reading: %.2f\n",monthly_total);
+                                printf("line location: %lu\n",current_meter_r_location);
+                                printf("Current consumption: %.2f\n",current_consumption);
+                                printf("Water Charge: %.2f\n",water_charge);
+                                printf("Sewerage Charge: %.2f\n",sewerage_charge);
+                                printf("Service Charge: %.2f\n",service_charge);
+                                printf("line location: %lu\n",service_c_location);
+                                printf("PAM (Price Adjustment Mechanism): %.2f\n",PAM);
+                                printf("X-Factor: %.2f\n",x_factor);
+                                printf("K-Factor: %.2f\n",k_factor);
+                                printf("Total Current Charges: %.2f\n",total_current_charges);
+                                printf("Balance Overdue: %.2f\n",user.balance_overdue_amt);
+                                printf("line location (billing logs): %lu\n",balance_overdue_location);
+                                printf("line location (customer database): %lu\n",cust_balance_overdue_location);
+                                printf("Balance To Be Paid: %.2f\n",bill_amt_to_pay);
+                                printf("line location: %lu\n",bill_balance_tbp_location);
+                                printf("Total Amount Due: %.2f\n",total_amount_due);
+                                if(early_payment_reduction == 0)
+                                {
+                                    printf("Early Payment Reduction: NOT eligible\n");
+                                }
+                                else
+                                {
+                                    printf("Early Payment Reduction: Eligible\n");
+                                    
+                                }
+                                printf(bold_start"==================================\n"bold_end);
+                            }
+
+                            i = 0;
+                            if(bill_status == 0) // If bill has been paid
+                            {
+                                printf(bold_start"\nTHIS BILL HAS BEEN PAID\n"bold_end);
+
+                                printf("\nWhen you're done enter (X):\n");
+                                scanf(" %c", &send_back_variable);
+                            
+                                if(send_back_variable == 'X' || send_back_variable == 'x')
+                                {
+                                    goto jump_customer_actions;
+                                }
+
+                            }
+                            else // bill has NOT been paid
+                            {
+                                while(choice != '1' && choice != '2' && choice != '0')
+                                {
+                                    if(i>0)
+                                    {
+                                        printf(bold_start"\n-Invalid Option-\n"bold_end);
+                                    }
+                                    printf(bold_start"\nOptions:\n"bold_end);
+                                    printf("(1) - Pay in Full\n(2) - Pay in Partials\n(0) - Return to Menu\n");
+                                    scanf(" %c", &choice);
+                                    i++;
+                                }
+
+                                if(choice == '0')
+                                {
+                                    goto jump_customer_actions;
+                                }
+                                else if(choice == '1') // Full Payment
+                                {
+                                    customerdbpointer = fopen(customerdatabase,"r"); // Attempts to open file in read mode (r)
+
                                     //Creating temporary file to make edits
                                     clear_stringarray(filename_temp);
-                                    strcpy(filename_temp,billfile); // Copies name of right variable into left
+                                    strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
                                 
                                     int a = 0;
                                     for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
@@ -5248,29 +5578,22 @@ jump_customer_actions:
                                     temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
                                     //Temporary file now created
                                 
-                                    fseek(billfilepointer,0,SEEK_SET); //Resests pointer to start of file
+                                    fseek(customerdbpointer,0,SEEK_SET); //Resests pointer to start of file
                             
-                                    if(temp_pointer != NULL && billfilepointer != NULL) // If both files open successfully, do:
+                                    // Updating balance overdue to show account is fully paid
+                                    if(temp_pointer != NULL && customerdbpointer != NULL) // If both files open successfully, do:
                                     {
                                         current_line = 1;
-                                        while(fgets(str,max_e_length,billfilepointer)!=NULL)
+                                        while(fgets(str,max_e_length,customerdbpointer)!=NULL)
                                         {
-                                            if(current_line == bill_balance_tbp_location)
+                                            if(current_line == cust_balance_overdue_location)
                                             {
+                                                clear_stringarray(strtemp);
                                                 if(debug == 0)
                                                 {
-                                                    printf("\nBILL BALANCE TO BE PAID, EDITED to 0\n");
+                                                    printf("\nCUSTOMER BALANCE OVERDUE, EDITED\n");
                                                 }
-                                                snprintf(strtemp,max_e_length,balance_tbp_prefix"0\n");
-                                                fputs(strtemp,temp_pointer);
-                                            }
-                                            else if(current_line == bill_status_location)
-                                            {
-                                                if(debug == 0)
-                                                {
-                                                    printf("\nBILL STATUS, EDITED to 0\n");
-                                                }
-                                                snprintf(strtemp,max_e_length,bill_status_prefix"0\n");
+                                                snprintf(strtemp,max_e_length,balance_overdue_prefix"%.2f\n",(original_user_balance_od_amt-total_amount_due)+0.0);
                                                 fputs(strtemp,temp_pointer);
                                             }
                                             else
@@ -5280,12 +5603,13 @@ jump_customer_actions:
                                             current_line++;
                                         }
                                     
-                                        fclose(billfilepointer);
+                                        fclose(customerdbpointer);
                                         fclose(temp_pointer);
                                         clear_stringarray(str);
                                         clear_stringarray(strtemp);
                                 
-                                        if(remove(billfile) != 0)
+                                        // Replacing original file with copy
+                                        if(remove(customerdatabase) != 0)
                                         {
                                             if(debug == 0)
                                             {
@@ -5293,7 +5617,228 @@ jump_customer_actions:
                                                 printf(bold_start"\n-Failed to Remove File-\n"bold_end);
                                             }
                                         }  
-                                        else if(rename(filename_temp,billfile) != 0)
+                                        else if(rename(filename_temp,customerdatabase) != 0)
+                                        {
+                                            if(debug == 0)
+                                            {
+                                                perror("\nError msg");
+                                                printf(bold_start"\n-Failed to Replace File-\n"bold_end);
+                                            }
+                                        }
+
+                                        // If balance was successfully changed to paid, then update bill status & amount to 0 (FULLY PAID)
+                                        else
+                                        {
+                                            billfilepointer = fopen(billfile,"r"); // Attempts to open file in read mode (r)
+
+                                            //CHANGING PASSWORD
+                                            //Creating temporary file to make edits
+                                            clear_stringarray(filename_temp);
+                                            strcpy(filename_temp,billfile); // Copies name of right variable into left
+                                        
+                                            int a = 0;
+                                            for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
+                                            {
+                                                if(a<2)
+                                                {
+                                                    filename_temp[strlen(filename_temp)-(b+a)] = '\0';
+                                                    a++;            
+                                                }
+                                            }
+                                            strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
+                                            strcat(filename_temp,".txt"); // Adds back .txt to file name
+                                        
+                                            temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
+                                            //Temporary file now created
+                                        
+                                            fseek(billfilepointer,0,SEEK_SET); //Resests pointer to start of file
+                                    
+                                            if(temp_pointer != NULL && billfilepointer != NULL) // If both files open successfully, do:
+                                            {
+                                                current_line = 1;
+                                                while(fgets(str,max_e_length,billfilepointer)!=NULL)
+                                                {
+                                                    if(current_line == bill_balance_tbp_location)
+                                                    {
+                                                        if(debug == 0)
+                                                        {
+                                                            printf("\nBILL BALANCE TO BE PAID, EDITED to 0\n");
+                                                        }
+                                                        snprintf(strtemp,max_e_length,balance_tbp_prefix"0\n");
+                                                        fputs(strtemp,temp_pointer);
+                                                    }
+                                                    else if(current_line == bill_status_location)
+                                                    {
+                                                        if(debug == 0)
+                                                        {
+                                                            printf("\nBILL STATUS, EDITED to 0\n");
+                                                        }
+                                                        snprintf(strtemp,max_e_length,bill_status_prefix"0\n");
+                                                        fputs(strtemp,temp_pointer);
+                                                    }
+                                                    else
+                                                    {
+                                                        fputs(str,temp_pointer);
+                                                    }
+                                                    current_line++;
+                                                }
+                                            
+                                                fclose(billfilepointer);
+                                                fclose(temp_pointer);
+                                                clear_stringarray(str);
+                                                clear_stringarray(strtemp);
+                                        
+                                                if(remove(billfile) != 0)
+                                                {
+                                                    if(debug == 0)
+                                                    {
+                                                        perror("\nError msg");
+                                                        printf(bold_start"\n-Failed to Remove File-\n"bold_end);
+                                                    }
+                                                }  
+                                                else if(rename(filename_temp,billfile) != 0)
+                                                {
+                                                    if(debug == 0)
+                                                    {
+                                                        perror("\nError msg");
+                                                        printf(bold_start"\n-Failed to Replace File-\n"bold_end);
+                                                    }
+                                                }
+
+                                                //Upon successfull execution of all the previous steps, do:
+                                                // Printing Receipt
+                                                else
+                                                {
+                                                    struct tm date = *localtime(&t); // getting current time & date  
+
+                                                    setall_uppercase(user.firstname);
+                                                    setall_uppercase(user.lastname);
+                                                    float service_fee = 60.00;
+                                                    srand(time(NULL)); //Sets random function's seed to current time
+                                                    
+                                                    system(terminal_clear_string);
+                                                    printf(bold_start"====================== RECEIPT =======================\n"bold_end);
+                                                    printf(" Date Issued      : %s\n", datestr1);
+                                                    printf(" Date Due         : %s\n", datestr2);
+                                                    printf(" Customer#        : %s\n",id_of_current_account);
+                                                    printf(" Premises ID#     : %s\n",user.premisesID[premises_pick]);
+                                                    printf(" Receipt#         : %d\n",(100000 + rand() % 999999 - 100000 + 1)*(100000 + rand() % 999999 - 100000 + 1));
+                                                    printf(" Type             : Utility Bill ( Water )\n");
+                                                    printf(" Meter Reading    : %.2fL\n",monthly_total);
+                                                    printf(" Old Meter Reading: %.2fL\n",user.meter_reading[premises_pick]);
+                                                    printf(" Customer Name    : %s  %s\n\n",user.firstname,user.lastname);
+                                                    
+                                                    printf(bold_start" Description\t\t\t\tAmount $\n"bold_end);
+                                                    printf(" Current Charges  :\t\t\t%.2f\n",bill_amt_to_pay);
+                                                    
+                                                    if(original_user_balance_od_amt<1) // If user account has credit 
+                                                    {
+                                                        printf(" Balance Overdue  :\t\t\t%.2f\n",original_user_balance_od_amt*0);
+                                                    }
+                                                    else
+                                                    {
+                                                        printf(" Balance Overdue  :\t\t\t%.2f\n",original_user_balance_od_amt-bill_amt_to_pay);
+                                                    }
+                                                    
+                                                    if(original_user_balance_od_amt<1)
+                                                    {
+                                                        printf(" Balance B/F      :\t\t\t%.2f\n\n",original_user_balance_od_amt-bill_amt_to_pay);
+                                                    }
+                                                    else
+                                                    {
+                                                        printf(" Balance B/F      :\t\t\t%.2f\n\n",original_user_balance_od_amt*0);
+                                                    }
+                                                    printf(" Service fee      :\t\t\t%.2f\n",service_fee);
+                                                    printf(" Recipt Total     :\t\t\t%.2f\n\n",bill_amt_to_pay+service_fee);
+
+                                                    printf(bold_start"~~~~~~~~~~~~~ Thank you for your payment ~~~~~~~~~~~~~\n"bold_end);
+                                                    printf(bold_start"======================================================\n"bold_end);
+                                                    
+                                                    //Undoing setall_uppercase (just incase)
+                                                    setall_lowercase(user.firstname);
+                                                    setall_lowercase(user.lastname);
+                                                }
+
+                                            }
+                                        }
+                                    }
+                                }
+                                else if(choice == '2') // Partial Payment
+                                {
+                                    float payment_amt = 0;
+                                    printf(underline_start"\nHow much would you like to pay ( Minimum of 1 JMD ): \n"underline_end);
+                                    scanf("%f", &payment_amt);
+
+                                    while(payment_amt == total_amount_due)
+                                    {
+                                        printf(bold_start"\n-Cannot cover full costs while in partial payments!-\nWe recommend switching to full payment (1) for such transactions\n"bold_end);
+                                        printf(underline_start"\nHow much would you like to pay ( Minimum of 1 JMD ): \n"underline_end);
+                                        scanf("%f", &payment_amt);
+                                    }
+                                    while(payment_amt<1.00)
+                                    {
+                                        printf(bold_start"\n-INVALID PAYMENT AMOUNT ( Minimum of 1 JMD )-\n"bold_end);
+                                        printf(underline_start"\nHow much would you like to pay: \n"underline_end);
+                                        scanf("%f", &payment_amt);
+                                    }
+
+
+                                    customerdbpointer = fopen(customerdatabase,"r"); // Attempts to open file in read mode (r)
+
+                                    //Creating temporary file to make edits
+                                    clear_stringarray(filename_temp);
+                                    strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
+                                
+                                    // Removes .txt from end of file
+                                    int a = 0;
+                                    for(int b = 1; b<strlen(filename_temp); b++)
+                                    {
+                                        if(a<2)
+                                        {
+                                            filename_temp[strlen(filename_temp)-(b+a)] = '\0';
+                                            a++;            
+                                        }
+                                    }
+                                    strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
+                                    strcat(filename_temp,".txt"); // Adds back .txt to file name
+                                
+                                    temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
+                                    //Temporary file now created
+                                
+                                    fseek(customerdbpointer,0,SEEK_SET); //Resests pointer to start of file
+                            
+                                    if(temp_pointer != NULL && customerdbpointer != NULL) // If both files open successfully, do:
+                                    {
+                                        current_line = 1;
+                                        while(fgets(str,max_e_length,customerdbpointer)!=NULL)
+                                        {
+                                            if(current_line == cust_balance_overdue_location)
+                                            {
+                                                clear_stringarray(strtemp);
+                                                snprintf(strtemp,max_e_length,balance_overdue_prefix"%.2f\n",original_user_balance_od_amt-payment_amt);
+                                                fputs(strtemp,temp_pointer);
+                                            }
+                                            else
+                                            {
+                                                fputs(str,temp_pointer);
+                                            }
+                                            current_line++;
+                                        }
+                                    
+                                        fclose(customerdbpointer);
+                                        fclose(temp_pointer);
+                                        clear_stringarray(str);
+                                        clear_stringarray(strtemp);
+                                
+                                        if(remove(customerdatabase) != 0)
+                                        {
+                                            if(debug == 0)
+                                            {
+                                                perror("\nError msg");
+                                                printf(bold_start"\n-Failed to Remove File-\n"bold_end);
+                                            }
+                                        }  
+                                        else if(rename(filename_temp,customerdatabase) != 0)
                                         {
                                             if(debug == 0)
                                             {
@@ -5303,188 +5848,147 @@ jump_customer_actions:
                                         }
                                         else
                                         {
-                                            printf(bold_start"\n-Full Payment Made-\n"bold_end);
-                                        }
+                                            billfilepointer = fopen(billfile,"r"); // Attempts to open file in read mode (r)
 
-                                    }
-                                }
-                            }
-                        }
-                        else if(choice == '2') // Partial Payment
-                        {
-                            float payment_amt = 0;
-                            printf(underline_start"\nHow much would you like to pay ( Minimum of 1 JMD ): \n"underline_end);
-                            scanf("%f", &payment_amt);
-
-                            while(payment_amt == total_amount_due)
-                            {
-                                printf(bold_start"\n-Cannot cover full costs while in partial payments!-\nWe recommend switching to full payment (1) for such transactions\n"bold_end);
-                                printf(underline_start"\nHow much would you like to pay ( Minimum of 1 JMD ): \n"underline_end);
-                                scanf("%f", &payment_amt);
-                            }
-                            while(payment_amt<1.00)
-                            {
-                                printf(bold_start"\n-INVALID PAYMENT AMOUNT ( Minimum of 1 JMD )-\n"bold_end);
-                                printf(underline_start"\nHow much would you like to pay: \n"underline_end);
-                                scanf("%f", &payment_amt);
-                            }
-
-
-                            customerdbpointer = fopen(customerdatabase,"r"); // Attempts to open file in read mode (r)
-
-                            //Creating temporary file to make edits
-                            clear_stringarray(filename_temp);
-                            strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
-                        
-                            int a = 0;
-                            for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
-                            {
-                                if(a<2)
-                                {
-                                    filename_temp[strlen(filename_temp)-(b+a)] = '\0';
-                                    a++;            
-                                }
-                            }
-                            strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
-                            strcat(filename_temp,".txt"); // Adds back .txt to file name
-                        
-                            temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
-                            //Temporary file now created
-                        
-                            fseek(customerdbpointer,0,SEEK_SET); //Resests pointer to start of file
-                    
-                            if(temp_pointer != NULL && customerdbpointer != NULL) // If both files open successfully, do:
-                            {
-                                current_line = 1;
-                                while(fgets(str,max_e_length,customerdbpointer)!=NULL)
-                                {
-                                    if(current_line == cust_balance_overdue_location)
-                                    {
-                                        clear_stringarray(strtemp);
-                                        snprintf(strtemp,max_e_length,balance_overdue_prefix"%.2f\n",original_user_balance_od_amt-payment_amt);
-                                        fputs(strtemp,temp_pointer);
-                                    }
-                                    else
-                                    {
-                                        fputs(str,temp_pointer);
-                                    }
-                                    current_line++;
-                                }
-                            
-                                fclose(customerdbpointer);
-                                fclose(temp_pointer);
-                                clear_stringarray(str);
-                                clear_stringarray(strtemp);
-                        
-                                if(remove(customerdatabase) != 0)
-                                {
-                                    if(debug == 0)
-                                    {
-                                        perror("\nError msg");
-                                        printf(bold_start"\n-Failed to Remove File-\n"bold_end);
-                                    }
-                                }  
-                                else if(rename(filename_temp,customerdatabase) != 0)
-                                {
-                                    if(debug == 0)
-                                    {
-                                        perror("\nError msg");
-                                        printf(bold_start"\n-Failed to Replace File-\n"bold_end);
-                                    }
-                                }
-                                else
-                                {
-                                    billfilepointer = fopen(billfile,"r"); // Attempts to open file in read mode (r)
-
-                                    //CHANGING PASSWORD
-                                    //Creating temporary file to make edits
-                                    clear_stringarray(filename_temp);
-                                    strcpy(filename_temp,billfile); // Copies name of right variable into left
-                                
-                                    int a = 0;
-                                    for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
-                                    {
-                                        if(a<2)
-                                        {
-                                            filename_temp[strlen(filename_temp)-(b+a)] = '\0';
-                                            a++;            
-                                        }
-                                    }
-                                    strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
-                                    strcat(filename_temp,".txt"); // Adds back .txt to file name
-                                
-                                    temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
-                                    //Temporary file now created
-                                
-                                    fseek(billfilepointer,0,SEEK_SET); //Resests pointer to start of file
-                            
-                                    if(temp_pointer != NULL && billfilepointer != NULL) // If both files open successfully, do:
-                                    {
-                                        current_line = 1;
-                                        while(fgets(str,max_e_length,billfilepointer)!=NULL)
-                                        {
-                                            if(current_line == bill_status_location && bill_amt_to_pay-payment_amt <= 0)
-                                            // if the current line matches with bill status AND the bill amount being paid is
-                                            // MORE than stipulated on the bill, the bill satus is set to paid on billing_logs
+                                            //CHANGING PASSWORD
+                                            //Creating temporary file to make edits
+                                            clear_stringarray(filename_temp);
+                                            strcpy(filename_temp,billfile); // Copies name of right variable into left
+                                        
+                                            int a = 0;
+                                            for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
                                             {
-                                                clear_stringarray(strtemp);
-                                                snprintf(strtemp,max_e_length,bill_status_prefix"0\n");
-                                                fputs(strtemp,temp_pointer);
-                                            }
-                                            else if(current_line == bill_balance_tbp_location)
-                                            {
-                                                float new_value_temp = bill_amt_to_pay-payment_amt;
-                                                if(new_value_temp < 0)
+                                                if(a<2)
                                                 {
-                                                    new_value_temp = 0;
+                                                    filename_temp[strlen(filename_temp)-(b+a)] = '\0';
+                                                    a++;            
                                                 }
-                                                snprintf(strtemp,max_e_length,balance_tbp_prefix"%.2f\n",new_value_temp);
-                                                fputs(strtemp,temp_pointer);
                                             }
-                                            else
-                                            {
-                                                fputs(str,temp_pointer);
-                                            }
-                                            current_line++;
-                                        }
+                                            strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
+                                            strcat(filename_temp,".txt"); // Adds back .txt to file name
+                                        
+                                            temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
+                                            //Temporary file now created
+                                        
+                                            fseek(billfilepointer,0,SEEK_SET); //Resests pointer to start of file
                                     
-                                        fclose(billfilepointer);
-                                        fclose(temp_pointer);
-                                        clear_stringarray(str);
-                                        clear_stringarray(strtemp);
-                                
-                                        if(remove(billfile) != 0)
-                                        {
-                                            if(debug == 0)
+                                            if(temp_pointer != NULL && billfilepointer != NULL) // If both files open successfully, do:
                                             {
-                                                perror("\nError msg");
-                                                printf(bold_start"\n-Failed to Remove File-\n"bold_end);
-                                            }
-                                        }  
-                                        else if(rename(filename_temp,billfile) != 0)
-                                        {
-                                            if(debug == 0)
-                                            {
-                                                perror("\nError msg");
-                                                printf(bold_start"\n-Failed to Replace File-\n"bold_end);
+                                                current_line = 1;
+                                                while(fgets(str,max_e_length,billfilepointer)!=NULL)
+                                                {
+                                                    if(current_line == bill_status_location && bill_amt_to_pay-payment_amt <= 0)
+                                                    // if the current line matches with bill status AND the bill amount being paid is
+                                                    // MORE than stipulated on the bill, the bill satus is set to paid on billing_logs
+                                                    {
+                                                        clear_stringarray(strtemp);
+                                                        snprintf(strtemp,max_e_length,bill_status_prefix"0\n");
+                                                        fputs(strtemp,temp_pointer);
+                                                    }
+                                                    else if(current_line == bill_balance_tbp_location)
+                                                    {
+                                                        float new_value_temp = bill_amt_to_pay-payment_amt;
+                                                        if(new_value_temp < 0)
+                                                        {
+                                                            new_value_temp = 0;
+                                                        }
+                                                        snprintf(strtemp,max_e_length,balance_tbp_prefix"%.2f\n",new_value_temp);
+                                                        fputs(strtemp,temp_pointer);
+                                                    }
+                                                    else
+                                                    {
+                                                        fputs(str,temp_pointer);
+                                                    }
+                                                    current_line++;
+                                                }
+                                            
+                                                fclose(billfilepointer);
+                                                fclose(temp_pointer);
+                                                clear_stringarray(str);
+                                                clear_stringarray(strtemp);
+                                        
+                                                if(remove(billfile) != 0)
+                                                {
+                                                    if(debug == 0)
+                                                    {
+                                                        perror("\nError msg");
+                                                        printf(bold_start"\n-Failed to Remove File-\n"bold_end);
+                                                    }
+                                                }  
+                                                else if(rename(filename_temp,billfile) != 0)
+                                                {
+                                                    if(debug == 0)
+                                                    {
+                                                        perror("\nError msg");
+                                                        printf(bold_start"\n-Failed to Replace File-\n"bold_end);
+                                                    }
+                                                }
+                                                
+                                                // Printing Receipt
+                                                else
+                                                {
+                                                    struct tm date = *localtime(&t); // getting current time & date  
+
+                                                    setall_uppercase(user.firstname);
+                                                    setall_uppercase(user.lastname);
+                                                    float service_fee = 60.00;
+                                                    srand(time(NULL)); //Sets random function's seed to current time
+
+                                                    system(terminal_clear_string);
+                                                    printf(bold_start"====================== RECEIPT =======================\n"bold_end);
+                                                    printf(" Date Issued      : %s\n", datestr1);
+                                                    printf(" Date Due         : %s\n", datestr2);
+                                                    printf(" Customer#        : %s\n",id_of_current_account);
+                                                    printf(" Premises ID#     : %s\n",user.premisesID[premises_pick]);
+                                                    printf(" Receipt#         : %d\n",(100000 + rand() % 999999 - 100000 + 1)*(100000 + rand() % 999999 - 100000 + 1));
+                                                    printf(" Type             : Utility Bill ( Water )\n");
+                                                    printf(" Meter Reading    : %.2fL\n",monthly_total);
+                                                    printf(" Old Meter Reading: %.2fL\n",user.meter_reading[premises_pick]);
+                                                    printf(" Customer Name    : %s  %s\n\n",user.firstname,user.lastname);
+                                                    
+                                                    printf(bold_start" Description\t\t\t\tAmount $\n"bold_end);
+                                                    printf(" Current Charges  :\t\t\t%.2f\n",payment_amt);
+                                                    
+                                                    if(original_user_balance_od_amt<1) // If user account has credit 
+                                                    {
+                                                        printf(" Balance Overdue  :\t\t\t%.2f\n",original_user_balance_od_amt*0);
+                                                    }
+                                                    else
+                                                    {
+                                                        printf(" Balance Overdue  :\t\t\t%.2f\n",original_user_balance_od_amt-payment_amt);
+                                                    }
+                                                    
+                                                    if(original_user_balance_od_amt<1)
+                                                    {
+                                                        printf(" Balance B/F      :\t\t\t%.2f\n\n",original_user_balance_od_amt-payment_amt);
+                                                    }
+                                                    else
+                                                    {
+                                                        printf(" Balance B/F      :\t\t\t%.2f\n\n",original_user_balance_od_amt*0);
+                                                    }
+                                                    printf(" Service fee      :\t\t\t%.2f\n\n",service_fee);
+                                                    printf(" Recipt Total     :\t\t\t%.2f\n",payment_amt+service_fee);
+
+                                                    printf(bold_start"~~~~~~~~~~~~~ Thank you for your payment ~~~~~~~~~~~~~\n"bold_end);
+                                                    printf(bold_start"======================================================\n"bold_end);
+                                                }
+
                                             }
                                         }
-
                                     }
-                                    printf(bold_start"\n-Partial Payment of $%.2f Made, towards $%.2f-\n"bold_end,payment_amt,total_amount_due);
                                 }
                             }
-                        }
 
+                        }
+                        else
+                        {
+                            printf(text_red_start"\nNo bill generated for premises\n"text_color_end);
+                        }
                     }
                     else
                     {
-                        printf(text_red_start"\nNo bill generated for premises\n"text_color_end);
+                        printf(file_open_error);
                     }
-                }
-                else
-                {
-                    printf(file_open_error);
                 }
             }
             else
@@ -5492,37 +5996,44 @@ jump_customer_actions:
                 printf(text_red_start"\nNo Premises Owned by this account\n"text_color_end);
             }
             break;
-        case 3: // View bills
 
-            if(premisesamt>0)
+        case 3: // View bills ( most recent )
+            if(premisesamt-surrendered_premises_amt>0)
             {
                 system(terminal_clear_string);
                 printf(bold_start"======================================== BILLING TERMINAL ========================================\n"bold_end); //Outputting file header
                 
                 //Printing Owned Premises
-                printf(bold_start"\nPREMISES OWNED %d\n"bold_end,premisesamt);
+                printf(bold_start"\nPREMISES OWNED %d\n"bold_end,premisesamt-surrendered_premises_amt);
                 for(i = 0; i < premisesamt; i++)
                 {
-                    printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
-                    printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
-                    printf(lastmeter_r_prefix"%d: %.2f",i+1, user.meter_reading[i]); 
-                        
-                    //Prevents double line space at the end of user record
-                    if(i != premisesamt-1)
+                    if(strstr(user.premisesID[i],surrender_prefix)==NULL)
                     {
-                        printf("\n\n"); 
-                    }
+                        printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
+                        printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
+                        printf(lastmeter_r_prefix"%d: %.2f",i+1, user.meter_reading[i]); 
+                            
+                        //Prevents double line space at the end of user record
+                        if(i != premisesamt-1)
+                        {
+                            printf("\n\n"); 
+                        }
+                        else
+                        {
+                            printf("\n"); 
+                        } 
+                    } 
                     else
                     {
-                        printf("\n"); 
-                    }                      
+                        continue;
+                    }              
                 }
 
                 int premises_pick;
                 printf(underline_start"\nPick premises # to view bill:\n"underline_end);
                 scanf(" %d" , &premises_pick);
 
-                while(premises_pick > premisesamt || premises_pick <= 0)
+                while(premises_pick > premisesamt || premises_pick <= 0 || strstr(user.premisesID[premises_pick-1],surrender_prefix)!=NULL)
                 {
                     printf(bold_start"\n-Customer owns no such premises-\n"bold_end);
                     printf(underline_start"\nPick premises # to view bill:\n"underline_end);
@@ -5732,8 +6243,145 @@ jump_customer_actions:
                 printf(text_red_start"\nNo Premises Owned by this account\n"text_color_end);
             }
             break;
-        case 4:
-            //Code here
+
+        case 4: // Surrendering Meter
+            if(premisesamt-surrendered_premises_amt>0)
+            {
+                //Printing Owned Premises
+                system(terminal_clear_string);
+                printf(bold_start"======================================== METER SURRENDER ========================================\n\n"bold_end); //Outputting file header
+                printf(bold_start"PREMISES OWNED %d\n"bold_end,premisesamt-surrendered_premises_amt);
+                for(i = 0; i < premisesamt; i++)
+                {
+                    if(strstr(user.premisesID[i],surrender_prefix)==NULL)
+                    {
+                        printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
+                        printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
+                        printf(lastmeter_r_prefix"%d: %.2f",i+1, user.meter_reading[i]); 
+                            
+                        //Prevents double line space at the end of user record
+                        if(i != premisesamt-1)
+                        {
+                            printf("\n\n"); 
+                        }
+                        else
+                        {
+                            printf("\n"); 
+                        }
+                    }
+                    else
+                    {
+                        continue;
+                    }   
+                }
+
+                int premises_pick;
+                printf(underline_start"\nPick meter # to surrender:\n"underline_end);
+                scanf(" %d" , &premises_pick);
+
+                // Input validation
+                while(premises_pick > premisesamt || premises_pick <= 0 || strstr(user.premisesID[premises_pick-1],surrender_prefix)!=NULL)
+                {
+                    printf(bold_start"\n-Customer owns no such premises-\n"bold_end);
+                    printf(underline_start"\nPick premises # to view bill:\n"underline_end);
+                    scanf(" %d" , &premises_pick);  
+                }
+
+                //Getting confirmation that users wants to surrender meter
+                printf(bold_start"\nAre you sure you want to surrender this meter? (Y/N)"bold_end text_red_start"\nTHIS CANNOT BE UNDONE\n"text_color_end);
+                char confirmation;
+                scanf(" %c", &confirmation);
+
+                while(confirmation != 'Y' && confirmation != 'y' && confirmation != 'N' && confirmation != 'n')
+                {
+                    printf(bold_start"\n-INVALID INPUT-\n"bold_end);
+                    printf(bold_start"\nAre you sure you want to surrender this meter? (Y/N)\nTHIS CAN NOT BE UNDONE AND YOU'LL RETURN TO ACTION MENU UPON SELECTION OF (N)\n"bold_end);
+                    scanf(" %c", &confirmation);
+                }
+
+                if(confirmation == 'N' || confirmation == 'n')
+                {
+                    goto jump_customer_actions; // Returns to action menu
+                }
+                else if(confirmation == 'Y' || confirmation == 'y')
+                {
+                    premises_pick--; // Decrement so that the number matches actual index values
+
+                    //Creating temporary file to make edits
+                    clear_stringarray(filename_temp);
+                    strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
+                
+                    int a = 0;
+                    for(int b = 1; b<strlen(filename_temp); b++) // Removes .txt from end of file
+                    {
+                        if(a<2)
+                        {
+                            filename_temp[strlen(filename_temp)-(b+a)] = '\0';
+                            a++;            
+                        }
+                
+                    }
+                    strcat(filename_temp,"_temp"); // Adds "_temp" to the end of ^ ("customer_database" --> "customer_database_temp")
+                    strcat(filename_temp,".txt"); // Adds back .txt to file name
+                
+                    temp_pointer = fopen(filename_temp,"w+"); // attempts to create/overwrite file in Write & Reading mode (W+) 
+                    customerdbpointer = fopen(customerdatabase,"r"); // Attempts to open file in read mode (r)
+
+                    // EDITING DATA ( METER SIZE & STATUS)
+                    if(customerdbpointer != NULL && temp_pointer != NULL) // If both files open successfully
+                    {
+                        current_line = 1;
+                        while(fgets(str,max_e_length,customerdbpointer)!=NULL)
+                        // While, we're not at the end of file, do:
+                        {
+                            if(current_line == premisesID_location[premises_pick])
+                            {
+                                snprintf(strtemp,max_e_length,premisesid_prefix"%d: %s-SR\n",premises_pick+1,user.premisesID[premises_pick]);
+                                fputs(strtemp,temp_pointer);
+                            }
+                            else
+                            {
+                                fputs(str,temp_pointer);
+                            }
+                            current_line++;
+                        }
+
+                        fclose(customerdbpointer);
+                        fclose(temp_pointer);
+
+                        if(remove(customerdatabase) != 0)
+                        {
+                            if(debug == 0)
+                            {
+                                perror("\nError msg\n");
+                                printf(bold_start"\n-Failed to Remove File-\n"bold_end);
+                            }
+                        }  
+                        else if(rename(filename_temp,customerdatabase) != 0)
+                        {
+                            if(debug == 0)
+                            {
+                                perror("\nError msg\n");
+                                printf(bold_start"\n-Failed to Replace File-\n"bold_end);
+                            }
+                        }
+                        else
+                        {
+                            printf(bold_start"\n-Meter Surrendered for Premises: %s-\n"bold_end,user.premisesID[premises_pick]);
+                            audit_editcustomer(12,id_of_current_account);
+                        }
+                    }
+                    else
+                    {
+                        printf(file_open_error);
+                    }
+                }
+
+            }
+            else
+            {
+                printf(text_red_start"\nNo Premises Owned by this account\n"text_color_end);
+            }
             break;
         case 0:
             system(terminal_clear_string);
@@ -5795,6 +6443,10 @@ int duplicate_check (char *data_to_check,char *filename,char *prefix_to_check)
                 func_validation = 2; // Duplicate data was not found
             }
         }
+    }
+    else
+    {
+        printf(file_open_error);
     }
     fclose(fp);
     return func_validation;
@@ -6147,7 +6799,7 @@ int generateID ()
     //DEBUG
     if(debug == 0)
     {
-        printf("\n\nFUNCTION ID TEST: %lld\n\n", ID);
+        printf("\n\nFUNCTION GENERATE ID TEST: %lld\n\n", ID);
     }
     return ID;
 }
@@ -6303,51 +6955,17 @@ void auditaddcustomer(int audit_type, char *customerID)
         //Gets current time (Method by "CodeVault" on youtube)
         time_t t = time(NULL);
         struct tm date = *localtime(&t);
-                
-
-
-        sprintf(log.date,"%02d/%02d/%d\n", date.tm_mon +1 , date.tm_mday, date.tm_year + 1900);
-        sprintf(log.time,"%d:%02d", date.tm_hour, date.tm_min);
+            
+        // Format MONTH - DAY - YEAR | HOUR - MINUTE
+        snprintf(log.date,45,"[%02d/%02d/%d] - [%d:%02d]", date.tm_mon +1 , date.tm_mday, date.tm_year + 1900, date.tm_hour, date.tm_min);
 
         if (audit_type == 0) //Customer was added successfully
         {
-            fputs("Account created (by customer)\n", fp);
-                    
-            //Format MONTH - DAY - YEAR
-            fputs("Date: ", fp);
-            fputs(log.date, fp);
-
-            //Format HOUR - MINUTE
-            fputs("Time: (24 hour)", fp);
-            fputs(log.time, fp);
-            fputs("\n", fp);
-
-            fputs("New account ID: ", fp);
-            fputs(customerID, fp);
-
-            fputs("\n", fp);
-            fputs(data_breakpoint, fp);
-            fputs("\n\n", fp);
+            fprintf(fp,"%s | Account-created-(by-customer) | ID-created: %s\n",log.date,customerID);
         }
         else if (audit_type == 1) //Customer was added successfully by admin
         {
-            fputs("Account created (by admin)\n", fp);
-                    
-            //Format MONTH - DAY - YEAR
-            fputs("Date: ", fp);
-            fputs(log.date, fp);
-
-            //Format HOUR - MINUTE
-            fputs("Time: (24 hour)", fp);
-            fputs(log.time, fp);
-            fputs("\n", fp);
-
-            fputs("New account ID: ", fp);
-            fputs(customerID, fp);
-
-            fputs("\n", fp);
-            fputs(data_breakpoint, fp);
-            fputs("\n\n", fp);
+            fprintf(fp,"%s | Account-created-(by-admin) | ID-created: %s\n",log.date,customerID);
         }
     }
     else
@@ -6373,56 +6991,26 @@ void auditlogin(int audit_type, char *customerID)
         time_t t = time(NULL);
         struct tm date = *localtime(&t);
                 
-        sprintf(log.date,"%02d/%02d/%d\n", date.tm_mon +1 , date.tm_mday, date.tm_year + 1900);
-        sprintf(log.time,"%d:%02d", date.tm_hour, date.tm_min);
+        // Format MONTH - DAY - YEAR | HOUR - MINUTE
+        snprintf(log.date,45,"[%02d/%02d/%d] - [%d:%02d]", date.tm_mon +1 , date.tm_mday, date.tm_year + 1900, date.tm_hour, date.tm_min);
 
-        if (audit_type == 0) //User logged in successfully
+        if(audit_type == 0) //Customer logged in successfully
         {
-            fputs("Account login (by customer)\n", fp);
-                    
-            //Format MONTH - DAY - YEAR
-            fputs("Date: ", fp);
-            fputs(log.date, fp);
-
-            //Format HOUR - MINUTE
-            fputs("Time (24 hour): ", fp);
-            fputs(log.time, fp);
-            fputs("\n", fp);
-
-            fputs("ID of account login: ", fp);
-            fputs(customerID, fp);
-
-            fputs("\n", fp);
-            fputs(data_breakpoint, fp);
-            fputs("\n\n", fp);
+            fprintf(fp,"%s | Account-login-(by-customer) | ID-of-user: %s\n",log.date,customerID);
         }
-        else if (audit_type == 2) //admin user logged in successfully
+        else if (audit_type == 2) //Admin logged in successfully
         {
-            fputs("Account login (by admin)\n", fp);
-                    
-            //Format MONTH - DAY - YEAR
-            fputs("Date: ", fp);
-            fputs(log.date, fp);
-
-            //Format HOUR - MINUTE
-            fputs("Time (24 hour): ", fp);
-            fputs(log.time, fp);
-            fputs("\n", fp);
-
-            fputs("ID of account login: ", fp);
-            fputs(customerID, fp);
-
-            fputs("\n", fp);
-            fputs(data_breakpoint, fp);
-            fputs("\n\n", fp);
+            fprintf(fp,"%s | Account-login-(by-admin) | ID-of-user: %s\n",log.date,customerID);
         }
+
+        fclose(fp);
     }
     else
     {
         printf(file_open_error);
     }
 
-    fclose(fp);
+
 }
 
 //Defintion of function 13.
@@ -6504,69 +7092,58 @@ void audit_editcustomer(int audit_type, char * customerID)
         time_t t = time(NULL);
         struct tm date = *localtime(&t);
                 
-        sprintf(log.date,"%02d/%02d/%d\n", date.tm_mon +1 , date.tm_mday, date.tm_year + 1900);
-        sprintf(log.time,"%d:%02d", date.tm_hour, date.tm_min);
+        // Format MONTH - DAY - YEAR | HOUR - MINUTE
+        snprintf(log.date,45,"[%02d/%02d/%d] - [%d:%02d]", date.tm_mon +1 , date.tm_mday, date.tm_year + 1900, date.tm_hour, date.tm_min);
 
         switch (audit_type)
         {
             case 1: //Edit made to customer email
-                fputs("Edit made to customer income class (by admin)\n", fp);
+                fprintf(fp,"%s | Edit-made-to-customer-income-class-(by-admin) | ID-of-affected-user: ",log.date);
                 break;
-            case 2: //Edit made to customer email
-                fputs("Edit made to customer email (by admin)\n", fp);
+            case 2: //Edit made to customer 
+                fprintf(fp,"%s | Edit-made-to-customer-email-(by-admin) | ID-of-affected-user: ",log.date);
                 break;
             case 3: //Edit made to customer first name
-                fputs("Edit made to customer first name (by admin)\n", fp);
+                fprintf(fp,"%s | Edit-made-to-customer-first-name-(by-admin) | ID-of-affected-user: ",log.date);
                 break;
             case 4: //Edit made to customer last name
-                fputs("Edit made to customer last name (by admin)\n", fp);
+                fprintf(fp,"%s | Edit-made-to-customer-last-name-(by-admin)-| ID-of-affected-user: ",log.date);
                 break;
             case 5: //Edit made to customer meter size
-                fputs("Edit made to customer meter size (by admin)\n", fp);
+                fprintf(fp,"%s | Edit-made-to-customer-meter-size-(by-admin) | ID-of-affected-user: ",log.date);
                 break;
             case 6: //Edit made to customer meter reading
-                fputs("Edit made to customer meter reading (by admin)\n", fp);
+                fprintf(fp,"%s | Edit-made-to-customer-meter-reading-(by-admin) | ID-of-affected-user: ",log.date);
                 break;
             case 7: //Edit made to all customer fields
-                fputs("Edit made to all customer fields (by admin)\n", fp);
+                fprintf(fp,"%s | Edit-made-to-all-customer-fields-(by-admin) | ID-of-affected-user: ",log.date);
                 break;
             case 8: //Customer account archived
-                fputs("Customer account archived (by admin)\n", fp);
+                fprintf(fp,"%s | Customer-account-archived-(by-admin) | ID-of-affected-user: ",log.date);
                 break;
             case 9: //Edit made to customer password by customer
-                fputs("Edit made to customer password (by customer)\n", fp);
+                fprintf(fp,"%s | Edit-made-to-customer-password-(by-customer) | ID-of-affected-user: ",log.date);
                 break;
             case 10: //Edit made to customer password by admin
-                fputs("Edit made to customer password (by admin)\n", fp);
+                fprintf(fp,"%s | Edit-made-to-customer-password-(by-admin) | ID-of-affected-user: ",log.date);
                 break;
             case 11: //Premises added to customer account by admin
-                fputs("Premises added to customer account (by admin)\n", fp);
+                fprintf(fp,"%s | Premises-added-to-customer-account-(by-admin) | ID-of-affected-user: ",log.date);
+                break;
+            case 12: //Customer surrendering meter
+                fprintf(fp,"%s | Meter/Premises-surrendered-(by-customer) | ID-of-affected-user: ",log.date);
                 break;
         }
 
-        //Format MONTH - DAY - YEAR
-        fputs("Date: ", fp);
-        fputs(log.date, fp);
-
-        //Format HOUR - MINUTE
-        fputs("Time (24 hour): ", fp);
-        fputs(log.time, fp);
-        fputs("\n", fp);
-
-        fputs("ID of account edited: ", fp);
-        fputs(customerID, fp);
-
-        fputs("\n", fp);
-        fputs(data_breakpoint, fp);
-        fputs("\n\n", fp);
-
+        fprintf(fp,"%s\n",customerID);
+        fclose(fp); 
     }
     else
     {
         printf(file_open_error);
     }
 
-    fclose(fp); 
+
 }
 
 //18. Function defintion
@@ -6620,14 +7197,14 @@ int get_user_status(char* customerID_for_lookup)
                 break;
             }
         }
+
+        fclose(fp);
     
     }
     else
     {
         printf(file_open_error);
     }
-
-    fclose(fp);
 
     return user_status;
 }
@@ -6642,6 +7219,41 @@ int strhchar(char *string_to_check)
     // while end of string has not been reached, do:
     {
         if(isalpha(*(string_to_check+i)) != 0)
+        {
+            return 0;
+        }
+        i++;
+    }
+    return 1;
+}
+
+//Defintion of function 20.
+void setall_uppercase (char* string)
+{
+    char temp_string[max_e_length] = {0};
+    int i;
+
+    strcpy(temp_string, string);
+
+    for(i = 0; i<strlen(temp_string); i++)
+    {
+        temp_string[i] = toupper(temp_string[i]);
+    }
+    temp_string[i] = '\0';
+
+    strcpy(string, temp_string);
+}
+
+//Defintion of function 21.
+// Returns 1 if string has no numbers
+// Returns 0 if string has numbers
+int strhint(char *string_to_check)
+{
+    int i = 0;
+    while(*(string_to_check+i) != '\0')
+    // while end of string has not been reached, do:
+    {
+        if(isdigit(*(string_to_check+i)) != 0)
         {
             return 0;
         }
