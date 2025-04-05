@@ -1,0 +1,41 @@
+AUDIT LOGS
+
+[04/05/2025] - [14:12] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [14:13] | Account-created-(by-admin) | ID-created: 1920341
+[04/05/2025] - [14:15] | Account-login-(by-customer) | ID-of-user: 1920341
+[04/05/2025] - [14:19] | Edit-made-to-customer-password-(by-customer) | ID-of-affected-user: 1920341
+[04/05/2025] - [14:24] | Account-login-(by-customer) | ID-of-user: 1920341
+[04/05/2025] - [14:24] | Edit-made-to-customer-password-(by-customer) | ID-of-affected-user: 1920341
+[04/05/2025] - [14:29] | Account-login-(by-customer) | ID-of-user: 1920341
+[04/05/2025] - [14:29] | Edit-made-to-customer-password-(by-customer) | ID-of-affected-user: 1920341
+[04/05/2025] - [14:42] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [14:44] | Account-login-(by-customer) | ID-of-user: 1920341
+[04/05/2025] - [14:50] | Account-login-(by-customer) | ID-of-user: 1920341
+[04/05/2025] - [14:54] | Account-login-(by-customer) | ID-of-user: 1920341
+[04/05/2025] - [14:55] | Account-login-(by-customer) | ID-of-user: 1920341
+[04/05/2025] - [14:55] | Meter/Premises-surrendered-(by-customer) | ID-of-affected-user: 1920341
+[04/05/2025] - [14:56] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [15:01] | Account-login-(by-customer) | ID-of-user: 1920341
+[04/05/2025] - [15:05] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [15:24] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [16:05] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [16:10] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [16:21] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [16:25] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [16:27] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [16:28] | Account-created-(by-admin) | ID-created: 1230491
+[04/05/2025] - [16:31] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [16:33] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [16:33] | Account-created-(by-admin) | ID-created: 1892034
+[04/05/2025] - [16:58] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [17:03] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [17:04] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [17:07] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [17:08] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [17:09] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [17:09] | Account-created-(by-admin) | ID-created: 1029414
+[04/05/2025] - [17:10] | Account-login-(by-admin) | ID-of-user: 1010101
+[04/05/2025] - [17:11] | Customer-account-archived-(by-admin) | ID-of-affected-user: 1892034
+[04/05/2025] - [17:14] | Edit-made-to-customer-last-name-(by-admin)-| ID-of-affected-user: 1029414
+[04/05/2025] - [17:16] | Account-login-(by-customer) | ID-of-user: 1029414
+[04/05/2025] - [17:18] | Account-login-(by-admin) | ID-of-user: 1010101

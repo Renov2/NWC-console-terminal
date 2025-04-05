@@ -1,0 +1,31 @@
+BILLING LOGS
+
+Premises ID # 8023231
+UserID: 1029414
+Date of Issue: 04/05/2025
+Due Date: 05/05/2025
+Last Meter Reading # 2634.00
+Current Meter Reading: 2474.00
+Water Rate: 149.44
+Sewerage Rate: 172.72
+Service Charge: 39354.59
+Early Payment Reduction: 0.05
+Balance To Be Paid: 0.00
+Balance Overdue: -336205.75
+Bill Status: 0
+;
+Premises ID # 192034
+UserID: 1029414
+Date of Issue: 04/05/2025
+Due Date: 05/05/2025
+Last Meter Reading # 0.00
+Current Meter Reading: 2634.00
+Water Rate: 149.44
+Sewerage Rate: 172.72
+Service Charge: 39354.59
+Early Payment Reduction: 0.00
+Balance To Be Paid: 0.00
+Balance Overdue: 0.00
+Bill Status: 0
+;
+

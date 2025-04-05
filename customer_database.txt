@@ -1,0 +1,43 @@
+CUSTOMER DATABASE
+
+UserID: 1920341
+User Status: ACTIVE
+Income Class: 4
+User First Name: Emma
+User Last Name: Frost
+Cycle: 0
+Balance Overdue: -782209.31
+Premises ID #1: 8320132
+Meter Size #1: 150
+Last Meter Reading #1: 0.00
+Premises ID #2: 8023231
+Meter Size #2: 30
+Last Meter Reading #2: 4401.00
+Premises ID #3: 8431240-SR
+Meter Size #3: 15
+Last Meter Reading #3: 100.00
+;
+UserID: 1892034
+User Status: ARCHIVED
+Reason: Nerf Bucky Barnes ASAP
+Date Archived: 05/04/2025
+Income Class: 4
+User First Name: Bucky
+User Last Name: Barnes
+Cycle: 0
+Balance Overdue: 0
+Premises ID #1: 8431240-SR
+Meter Size #1: 15
+Last Meter Reading #1: 100.00
+;
+UserID: 1029414
+User Status: ACTIVE
+Income Class: 2
+User First Name: Adam
+User Last Name: Warlocked
+Cycle: 0
+Balance Overdue: -308256.09
+Premises ID #1: 192034
+Meter Size #1: 150
+Last Meter Reading #1: 2474.00
+;
