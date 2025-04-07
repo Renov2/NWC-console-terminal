@@ -1,6 +1,12 @@
 /******************************************************************************
-<Author Name>
-Created Febraury 23, 2025
+Author/s
+Jahleel Roberts - 2307549
+Kyle Walker - 2403246
+Ashley Chen - 2405912
+Saje Dwyer - 2405918
+Micah Hall - 2101829
+
+Date Created: Febraury 23, 2025
 
 //If using linux, change "_getwch()" to "getch()"
 
@@ -73,7 +79,7 @@ user will be prompted to change this password upon login to their account.
 #define service_c_prefix "Service Charge: "
 #define early_pr_prefix "Early Payment Reduction: " 
 #define bill_status_prefix "Bill Status: " // 1 for unpaid & 0 for paid
-#define surrender_prefix "-SR"
+#define surrender_suffix "-SR"
 #define cycle_prefix "Cycle: "
 #define reason_prefix "Reason: "
 #define date_archived_prefix "Date Archived: "
@@ -90,7 +96,7 @@ char stall;
 
 // set to 0 to see function outputs
 // set to 1 to not see function outputs
-int debug = 1;
+int debug = 0;
 int debug_scanfpassword = 1; // If linux is choosen at the start, this is set to 0
 
 //Initializing file name/s
@@ -562,101 +568,94 @@ void main()
         setall_lowercase(user.email);
         
         //Validating email format by checking if the 3 most popular email domain names are included
-        while(strstr(user.email,"@gmail.com") == NULL &&
-              strstr(user.email,"@yahoo.com") == NULL &&
-              strstr(user.email,"@hotmail.com") == NULL) //@<domain_name>.com was not found do:
-        {
-            printf("\n-Incorrect email format-\n\nAccepted domains:\n- @gmail.com\n- @yahoo.com\n- @hotmail.com\n\n");
-            printf(underline_start"Enter an email:\n"underline_end);
-            scanf("%s", user.email);
-            setall_lowercase(user.email);
-        }
-
         /**Checks if the email entered is already being used and
         asks the user to enter a new one if so**/
-        //On confirmation that email is available, user is prompted to enter password and their names.
-        if(duplicate_check(user.email,loginfile,email_prefix) != 0)
+        while(strstr(user.email,"@gmail.com") == NULL &&
+              strstr(user.email,"@yahoo.com") == NULL &&
+              strstr(user.email,"@hotmail.com") == NULL || duplicate_check(user.email,loginfile,email_prefix) != 2)
+              //@<domain_name>.com was not found do:
         {
-            
-            while(duplicate_check(user.email,loginfile,email_prefix) != 2)
+            if(duplicate_check(user.email,loginfile,email_prefix) != 2)
             {
                 printf(bold_start"\n-Email already in use!-\n\n"bold_end);
                 printf(underline_start"Enter new email:\n"underline_end);
                 scanf("%s", user.email);
                 setall_lowercase(user.email);
             }
-            
+            printf("\n-Incorrect email format-\n\nAccepted domains:\n- @gmail.com\n- @yahoo.com\n- @hotmail.com\n\n");
+            printf(underline_start"Enter an email:\n"underline_end);
+            scanf("%s", user.email);
+            setall_lowercase(user.email);
+        }
 
-            strcpy(user.password,"temp");//Placeholder value so checks after this point works
-            
-            //Gets password from user
-            while(strlen(user.password) < 8 || strlen(user.password)>31)
+
+        //On confirmation that email is available, user is prompted to enter password and their names.
+        printf(underline_start"\nEnter new password \n( %d characters max ):\n"underline_end,password_length);
+        scanf(" %s",user.password);
+
+        //Gets password from user
+        while(strlen(user.password) < 8 || strlen(user.password)>31)
+        {
+            if(strlen(user.password)>31)
             {
-                if(strlen(user.password)>31)
-                {
-                    printf(bold_start"\nPassword should be AT MOST 31 characters long\n"bold_end);
-                    printf(underline_start"\nEnter new password \n( %d characters max ):\n"underline_end,password_length);
-                    scanf(" %s",user.password);
-                    continue;
-                }
-                printf(bold_start"\nPassword should be AT LEAST 8 characters long\n"bold_end);
+                printf(bold_start"\nPassword should be AT MOST 31 characters long\n"bold_end);
                 printf(underline_start"\nEnter new password \n( %d characters max ):\n"underline_end,password_length);
                 scanf(" %s",user.password);
+                continue;
             }
-
-            printf(underline_start"\nEnter your first name:\n"underline_end);
-            scanf("%s", user.firstname);
-
-            while(strhint(user.firstname) != 1)
-            {
-                printf(bold_start"\n-name cannot have numbers-\n"bold_end);
-                printf(underline_start"\nEnter First Name: \n"underline_end);
-                scanf(" %s",user.firstname);
-            }            
-
-            printf(underline_start"\nEnter your last name:\n"underline_end);
-            scanf("%s", user.lastname);
-            
-            while(strhint(user.lastname) != 1)
-            {
-                printf(bold_start"\n-name cannot have numbers-\n"bold_end);
-                printf(underline_start"\nEnter Last Name: \n"underline_end);
-                scanf(" %s",user.lastname);
-            }  
-
-            //Generating random customer ID
-            int temp_ID = generateID();
-            
-            //Converts variable "temp_ID" ^ to string and puts it in variable "customerID"
-            sprintf(user.customerID, "%d", temp_ID);
-            
-            //Verifying the ID isnt already in use (just incase)
-            while(duplicate_check(user.customerID,customerdatabase,id_prefix) != 2)
-            {
-                temp_ID = generateID();
-                
-                //Converts variable "a" ^ to string and puts it in variable "customerID"
-                sprintf(user.customerID, "%d", temp_ID);
-            }
-            
-            //Inserting Data into their respective files
-            int add_status = addcustomer(loginfile,customerdatabase,user.customerID,
-                            user.firstname,user.lastname,user.email,
-                            user.password,0);
-
-            auditaddcustomer(add_status,user.customerID);
-            
-
-            system(clear_terminal); //Clears command line UI
-            
-            printf(bold_start"================== ACCOUNT CREATED ==================\n\n"bold_end);
-            printf(bold_start"Would you like to LOGIN? \n"bold_end"(Y) for yes\n(N) for no\n\n");
-            scanf(" %c", &registered);
+            printf(bold_start"\nPassword should be AT LEAST 8 characters long\n"bold_end);
+            printf(underline_start"\nEnter new password \n( %d characters max ):\n"underline_end,password_length);
+            scanf(" %s",user.password);
         }
-        else
+
+        printf(underline_start"\nEnter your first name:\n"underline_end);
+        scanf("%s", user.firstname);
+
+        while(strhint(user.firstname) != 1)
         {
-            printf(bold_start"\n-Login database could not be accessed-"bold_end);
+            printf(bold_start"\n-name cannot have numbers-\n"bold_end);
+            printf(underline_start"\nEnter First Name: \n"underline_end);
+            scanf(" %s",user.firstname);
+        }            
+
+        printf(underline_start"\nEnter your last name:\n"underline_end);
+        scanf("%s", user.lastname);
+        
+        while(strhint(user.lastname) != 1)
+        {
+            printf(bold_start"\n-name cannot have numbers-\n"bold_end);
+            printf(underline_start"\nEnter Last Name: \n"underline_end);
+            scanf(" %s",user.lastname);
+        }  
+
+        //Generating random customer ID
+        int temp_ID = generateID();
+        
+        //Converts variable "temp_ID" ^ to string and puts it in variable "customerID"
+        sprintf(user.customerID, "%d", temp_ID);
+        
+        //Verifying the ID isnt already in use (just incase)
+        while(duplicate_check(user.customerID,customerdatabase,id_prefix) != 2)
+        {
+            temp_ID = generateID();
+            
+            //Converts variable "a" ^ to string and puts it in variable "customerID"
+            sprintf(user.customerID, "%d", temp_ID);
         }
+        
+        //Inserting Data into their respective files
+        int add_status = addcustomer(loginfile,customerdatabase,user.customerID,
+                        user.firstname,user.lastname,user.email,
+                        user.password,0);
+
+        auditaddcustomer(add_status,user.customerID);
+        
+
+        system(clear_terminal); //Clears command line UI
+        
+        printf(bold_start"================== ACCOUNT CREATED ==================\n\n"bold_end);
+        printf(bold_start"Would you like to LOGIN? \n"bold_end"(Y) for yes\n(N) for no\n\n");
+        scanf(" %c", &registered);
     }
 
     
@@ -898,27 +897,33 @@ jump_admin_actions:
 
             //GETTINGS USER ID
             //Ensuring ID is atleast 7 digits long
-            while(strlen(user.customerID)!=7 || strhchar(user.customerID)==0)
+            while(strlen(user.customerID)!=7 || strhchar(user.customerID)==0 || duplicate_check(user.customerID,loginfile,id_prefix) != 2 || duplicate_check(user.customerID,customerdatabase,id_prefix) != 2)
             {
-                if(strhchar(user.customerID)!=1)
+                if(strlen(user.customerID)!=7)
+                {
+                    printf(bold_start"\n-ID must be 7 digits long-\n\n"bold_end);
+                    printf(underline_start"Enter new Customer ID:\n"underline_end);
+                    scanf(" %s", user.customerID);
+                    continue;
+                }
+                else if(strhchar(user.customerID)!=1)
                 {
                     printf(bold_start"\n-ID cannot have letters-\n\n"bold_end);
                     printf(underline_start"Enter new Customer ID:\n"underline_end);
                     scanf(" %s", user.customerID);
                     continue;
                 }
-                printf(bold_start"\n-Min & Max ID length is (7) digits!-\n\n"bold_end);
-                printf(underline_start"Enter new Customer ID:\n"underline_end);
-                scanf(" %s", user.customerID);
+                //Ensuring no duplicate IDs can be made
+                else if(duplicate_check(user.customerID,customerdatabase,id_prefix) != 2 || duplicate_check(user.customerID,loginfile,id_prefix) != 2)
+                {
+                    printf(bold_start"\n-ID already in use-\n"bold_end);
+                    printf(underline_start"\nEnter new Customer ID:\n"underline_end);
+                    scanf(" %s", user.customerID);
+                    continue;
+                }
             }
 
-            //Ensuring no duplicate IDs can be made
-            while(duplicate_check(user.customerID,customerdatabase,id_prefix) != 2)
-            {
-                printf(bold_start"\n-ID already in use-\n"bold_end);
-                printf(underline_start"\nEnter new Customer ID:\n"underline_end);
-                scanf(" %s", user.customerID);
-            }
+
 
             system(terminal_clear_string); // Clears command line UI
 
@@ -1004,30 +1009,30 @@ jump_admin_actions:
                 redo_gettingID = 1; // Default to false
 
                 //Ensuring Premises ID entered is 7 digits long and contains only numbers
-                while(strlen(strtemp)!=7 || strhchar(strtemp) != 1)
+                while(strlen(strtemp)!=7 || strhchar(strtemp) != 1 || duplicate_check(strtemp,customerdatabase,premisesid_prefix) != 2)
                 {
-                    if(strhchar(strtemp) != 1)
+                    if(strlen(strtemp)!=7)
+                    {
+                        printf(bold_start"\n-Premises ID must be 7 digits long-\n"bold_end);
+                        printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
+                        scanf(" %s",strtemp);
+                        continue;
+                    }
+                    else if(strhchar(strtemp) != 1)
                     {
                         printf(bold_start"\n-Premises ID cannot contain letters\n"bold_end);
                         printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
                         scanf(" %s",strtemp);
                         continue;
                     }
-                    printf(bold_start"\n-Max & Min ID size is (7) digits-\n"bold_end);
-                    printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
-                    scanf(" %s",strtemp);
-                }
-                
-                //Ensuring no dupliciate Premises ID can be made
-                while(duplicate_check(strtemp,customerdatabase,premisesid_prefix) != 2)
-                {
-                    // Checking if duplicate ID is surrendered
-                    if(get_premises_status(strtemp)!=1)
-                    // ID found was not surrendered, do:
+                    //Ensuring no dupliciate Premises ID can be made & Checking if duplicate ID is surrendered                    
+                    if(duplicate_check(strtemp,customerdatabase,premisesid_prefix) != 2 && get_premises_status(strtemp)!=1)
                     {
-                        printf(bold_start"\n-Premises In Use-\n\n"bold_end);
-                        printf(underline_start"Enter New Premises ID #%d: \n"underline_end,i+1);
+                        // ID found was not surrendered, do:
+                        printf(bold_start"\n-Premises ID already in use-\n"bold_end);
+                        printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
                         scanf(" %s",strtemp);
+                        continue;
                     }
                     else
                     {
@@ -1527,7 +1532,7 @@ jump_admin_actions:
                             ptr = NULL;
                             premisesamt++; 
                     
-                            if(strstr(str,surrender_prefix)!=NULL)
+                            if(strstr(str,surrender_suffix)!=NULL)
                             {
                                 surrendered_premises_amt++;
                             }
@@ -1614,7 +1619,7 @@ jump_admin_actions:
                     }
                     for(i = 0; i < premisesamt; i++)
                     {
-                        if(strstr(user.premisesID[i],surrender_prefix)==NULL)
+                        if(strstr(user.premisesID[i],surrender_suffix)==NULL)
                         {
                             printf(text_red_start premisesid_prefix"%d: %s\n"text_color_end,i+1, &user.premisesID[i]);
                             printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
@@ -2187,7 +2192,7 @@ jump_admin_actions:
                     scanf("%d",&choice);
 
                     //Ensuring user can't edit meter that customer dosen't have
-                    while(choice > premisesamt || choice < 1 || strstr(user.premisesID[choice-1],surrender_prefix)!=NULL)
+                    while(choice > premisesamt || choice < 1 || strstr(user.premisesID[choice-1],surrender_suffix)!=NULL)
                     {
                         printf(bold_start"\n-Customer owns no such meter #-\n"bold_end);
                         printf(underline_start"\nEnter VALID meter #:\n"underline_end);
@@ -2298,7 +2303,7 @@ jump_admin_actions:
                     scanf("%d",&choice);
 
                     //Ensuring user can't edit meter that customer dosen't haves
-                    while(choice > premisesamt || choice < 1 || strstr(user.premisesID[choice-1],surrender_prefix)!=NULL)
+                    while(choice > premisesamt || choice < 1 || strstr(user.premisesID[choice-1],surrender_suffix)!=NULL)
                     {
                         printf(bold_start"\n-Customer owns no such meter reading #-\n"bold_end);
                         printf(underline_start"\nEnter VALID meter reading #:\n"underline_end);
@@ -2766,11 +2771,13 @@ jump_admin_actions:
                             printf(underline_start"How many Premises would you like to add (Max 5 per customer): \n"underline_end);
                             scanf(" %d", &premises_to_add);
                         }
-                            
+                        
+                        fflush(stdin); // clear standard input buffer
+
                         //Gettings Premises details 
                         char temp_premisesID_hold[5][max_e_length] = {0}; // Variable used to store premises numbers already entered
                         int id_record_exists = 1; // Default to false 
-                        int redo_gettingID;
+                        int redo_gettingID = 1; // Default to false
                         for(int i = 0; i < premises_to_add; i++)          // and check to ensure current premises IDs  being entered, dont match past ones
                         {
                             system(terminal_clear_string); //Clears command line UI
@@ -2793,30 +2800,30 @@ jump_admin_actions:
                             redo_gettingID = 1; // Default to false
 
                             //Ensuring Premises ID entered is 7 digits long and contains only numbers
-                            while(strlen(strtemp)!=7 || strhchar(strtemp) != 1)
+                            while(strlen(strtemp)!=7 || strhchar(strtemp) != 1 || duplicate_check(strtemp,customerdatabase,premisesid_prefix) != 2)
                             {
-                                if(strhchar(strtemp) != 1)
+                                if(strlen(strtemp)!=7)
+                                {
+                                    printf(bold_start"\n-Premises ID must be 7 digits long-\n"bold_end);
+                                    printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
+                                    scanf(" %s",strtemp);
+                                    continue;
+                                }
+                                else if(strhchar(strtemp) != 1)
                                 {
                                     printf(bold_start"\n-Premises ID cannot contain letters\n"bold_end);
                                     printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
                                     scanf(" %s",strtemp);
                                     continue;
                                 }
-                                printf(bold_start"\n-Max & Min ID size is (7) digits-\n"bold_end);
-                                printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
-                                scanf(" %s",strtemp);
-                            }
-                
-                            
-                            //Ensuring no dupliciate Premises ID can be made
-                            while(duplicate_check(strtemp,customerdatabase,premisesid_prefix) != 2)
-                            {
-                                if(get_premises_status(strtemp)!=1)
-                                // ID found was not surrendered, do:
+                                //Ensuring no dupliciate Premises ID can be made & Checking if duplicate ID is surrendered                    
+                                if(duplicate_check(strtemp,customerdatabase,premisesid_prefix) != 2 && get_premises_status(strtemp)!=1)
                                 {
-                                    printf(bold_start"\n-Premises In Use-\n\n"bold_end);
-                                    printf(underline_start"Enter New Premises ID #%d: \n"underline_end,i+1);
+                                    // ID found was not surrendered, do:
+                                    printf(bold_start"\n-Premises ID already in use-\n"bold_end);
+                                    printf(underline_start"\nEnter premises ID (7 digits) #%d: \n"underline_end,i+1);
                                     scanf(" %s",strtemp);
+                                    continue;
                                 }
                                 else
                                 {
@@ -2860,13 +2867,12 @@ jump_admin_actions:
                                 
                                 char choice;
                                 int temp_mtr_size=0;
-                                float temp_lmtr_reading=0;
+                                float temp_lmtr_reading = 0;
                                 int temp_premises_amt = 0;
 
                                 //Using previous meter size from file
                                 if(id_record_exists != 1)
                                 {
-                                    fseek(customerdbpointer,0,SEEK_SET); //Resests pointer to start of file
                                     found_ID = 1; //Default to false
                                     found_breakpoint = 1; //Default to false
                                     
@@ -2888,24 +2894,29 @@ jump_admin_actions:
                                             //Getting specific premises info
                                             if(found_ID == 0)
                                             {
-                                                if(strstr(str,premisesid_prefix))
+                                                if(strstr(str,metersize_prefix))
                                                 {
-                                                    temp_premises_amt++;
-                                                }
-                                                else if(strstr(str,metersize_prefix))
-                                                {
+                                                    // Getting current meter size index number
+                                                    strncpy(strtemp2,str,max_e_length);
+                                                    remove_prefix(strtemp2,metersize_prefix);
+                                                    strtemp2[1] = '\0'; // Ensures only the first character is kept
+                                                    temp_premises_amt = atoi(strtemp2);
+            
+                                                    // Getting the meter size
                                                     snprintf(strtemp2,max_e_length,metersize_prefix"%d: ",temp_premises_amt);
                                                     remove_prefix(str,strtemp2);
                                                     temp_mtr_size = atoi(str);
                                                 }
                                                 else if(strstr(str,lastmeter_r_prefix))
                                                 {
+                                                    // Getting current meter reading
                                                     snprintf(strtemp2,max_e_length,lastmeter_r_prefix"%d: ",temp_premises_amt);
                                                     remove_prefix(str,strtemp2);
                                                     temp_lmtr_reading = atof(str);
                                                 }
                                             }
                                         }
+
                                         fclose(customerdbpointer);
 
                                         printf("\nPrevious meter size found for premises ID (%s)\nWould you like to use it? (Y) Yes OR (N) No\n",user.premisesID[i]);
@@ -2997,6 +3008,16 @@ jump_admin_actions:
     
                         if(send_back_variable == 'Y' || send_back_variable == 'y')
                         {
+                            /*
+                            In the event that the premises ID entered was surrendered,we wouldve accessed that
+                            information and subsequently closed the customer database file.
+                            So in the event a record of the premises ID already existed, we reopen the customer database file
+                            in READ mode (r) and create a temporary file to write to
+                            */
+                            if(id_record_exists != 1)
+                            {
+                                customerdbpointer = fopen(customerdatabase, "r"); // attempts to open file in READ mode (r)
+                            }
 
                             //Creating temporary file to make edits
                             strcpy(filename_temp,customerdatabase); // Copies name of right variable into left
@@ -3257,7 +3278,7 @@ jump_admin_actions:
                                 }
                                 else if(found_ID == 0 && strstr(str,premisesid_prefix) != NULL)
                                 {
-                                    if(strstr(str,surrender_prefix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
+                                    if(strstr(str,surrender_suffix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
                                     {
                                         premisesamt++;  
                                     }
@@ -3423,97 +3444,112 @@ jump_admin_actions:
                     //Resetting pointer
                     fseek(loginpointer,0,SEEK_SET);
                     
-                    //Getting user Data
-                    while(fgets(str,max_e_length,loginpointer)!=NULL && found_breakpoint != 0)
+                    if(loginpointer != NULL)
                     {
-                        if(strstr(str,user.customerID)!=NULL) //If id is found
+                        //Getting user Data
+                        while(fgets(str,max_e_length,loginpointer)!=NULL && found_breakpoint != 0)
                         {
-                            found_ID = 0;
-                        }
-                        else if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
-                        {
-                            found_breakpoint = 0;
-                        }
-                        
-                        //Finding email
-                        if(found_ID == 0 && strstr(str,email_prefix) != NULL) 
-                        //IF id has already been found and email prefix "User First Name: " has been found
-                        //Do:
-                        {
-                            strsanitize(str,0);
-                            printf("%s\n",str);
-                            break;
+                            if(strstr(str,user.customerID)!=NULL) //If id is found
+                            {
+                                found_ID = 0;
+                            }
+                            else if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
+                            {
+                                found_breakpoint = 0;
+                            }
+                            
+                            //Finding email
+                            if(found_ID == 0 && strstr(str,email_prefix) != NULL) 
+                            //IF id has already been found and email prefix "User First Name: " has been found
+                            //Do:
+                            {
+                                strsanitize(str,0);
+                                printf("%s\n",str);
+                                break;
+                            }
+                            
                         }
                         fclose(loginpointer);
                     }
-
-                    //Resetting values
-                    found_ID = 1;
-                    found_breakpoint = 1;
-                    //Resetting pointer
-                    fseek(customerdbpointer,0,SEEK_SET);
-                    
-                    premisesamt = 0;
-                    while(fgets(str, max_e_length,customerdbpointer) != NULL && found_breakpoint != 0) // Reads through entire file until the end is reached
+                    else
                     {
+                        printf(file_open_error);
+                    }
 
-                        if(strstr(str,user.customerID)!=NULL)
-                        {
-                            found_ID = 0;
-                        }
+                    if(customerdbpointer!=NULL)
+                    {
+                        //Resetting values
+                        found_ID = 1;
+                        found_breakpoint = 1;
+                        //Resetting pointer
+                        fseek(customerdbpointer,0,SEEK_SET);
                         
-                        if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
+                        premisesamt = 0;
+                        while(fgets(str, max_e_length,customerdbpointer) != NULL && found_breakpoint != 0) // Reads through entire file until the end is reached
                         {
-                            printf(text_color_end);
-                            found_breakpoint = 0;
-                        }
 
-                        if(strstr(str,premisesid_prefix) != NULL && found_ID == 0 && found_breakpoint != 0)
-                        {
-                            if(strstr(str,surrender_prefix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
+                            if(strstr(str,user.customerID)!=NULL)
                             {
-                                premisesamt++;
+                                found_ID = 0;
                             }
-                        }
-                        
-                        if(found_ID == 0 && strstr(str,data_breakpoint) == NULL)
-                        {
-                            //Displaying archived customer status as RED
-                            if(strstr(str,status_prefix"ARCHIVED")!=NULL)
-                            {
-                                printf(text_red_start"%s"text_color_end,str);
-                            }
-                            else if(strstr(str,balance_overdue_prefix)!=NULL)
-                            {
-                                printf(text_red_start"%s"text_color_end,str);
-                            }
-                            else if(strstr(str,surrender_prefix)!=NULL && strstr(str,premisesid_prefix)!=NULL)
-                            {
-
-                                //Removing surrender prefix from string
-                                int t = strlen(str);
-                                for(int i = 1 ; i<5; i++)
-                                {
-                                    str[t-i] = '\0'; 
-                                }
-
-                                strcat(str," - Surrendered -");
-                                printf(text_red_start"%s\n",str);
-                            }
-                            else if(strstr(str,premisesid_prefix)!=NULL && strstr(str,surrender_prefix)==NULL)
+                            
+                            if(strstr(str, data_breakpoint)!=NULL && found_ID == 0)
                             {
                                 printf(text_color_end);
-                                printf("%s",str);
+                                found_breakpoint = 0;
                             }
-                            else
+
+                            if(strstr(str,premisesid_prefix) != NULL && found_ID == 0 && found_breakpoint != 0)
                             {
-                                printf("%s",str);
+                                if(strstr(str,surrender_suffix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
+                                {
+                                    premisesamt++;
+                                }
                             }
+                            
+                            if(found_ID == 0 && strstr(str,data_breakpoint) == NULL)
+                            {
+                                //Displaying archived customer status as RED
+                                if(strstr(str,status_prefix"ARCHIVED")!=NULL)
+                                {
+                                    printf(text_red_start"%s"text_color_end,str);
+                                }
+                                else if(strstr(str,balance_overdue_prefix)!=NULL)
+                                {
+                                    printf(text_red_start"%s"text_color_end,str);
+                                }
+                                else if(strstr(str,surrender_suffix)!=NULL && strstr(str,premisesid_prefix)!=NULL)
+                                {
+
+                                    //Removing surrender prefix from string
+                                    int t = strlen(str);
+                                    for(int i = 1 ; i<5; i++)
+                                    {
+                                        str[t-i] = '\0'; 
+                                    }
+
+                                    strcat(str," - Surrendered -");
+                                    printf(text_red_start"%s\n",str);
+                                }
+                                else if(strstr(str,premisesid_prefix)!=NULL && strstr(str,surrender_suffix)==NULL)
+                                {
+                                    printf(text_color_end);
+                                    printf("%s",str);
+                                }
+                                else
+                                {
+                                    printf("%s",str);
+                                }
+                            }
+                            
                         }
-                        
+                        fclose(customerdbpointer);
                     }
-                    fclose(customerdbpointer);
-                    
+                    else
+                    {
+                        printf(file_open_error);
+                    }
+
                     printf(bold_start"\n=======================================================\n"bold_end);
                     printf(underline_start"PREMISES OWNED %d\n"underline_end,premisesamt);
                     printf(bold_start"=======================================================\n"bold_end);
@@ -3623,8 +3659,7 @@ jump_admin_actions:
                 printf(bold_start"\n-Please provide VALID reason for deletion-\n\n"bold_end);
                 printf(underline_start"Enter reason for deletion/archiving\n"underline_end bold_start"This will be recorded in the customer database\n"bold_end);
                 fflush(stdin);
-                getchar(); // catching newline character (\n).
-                scanf(" ");
+                scanf(" "); // catching newline character (\n).
                 fgets(reason,max_e_length,stdin);
             }
             
@@ -3656,13 +3691,17 @@ jump_admin_actions:
                     
                     if(found_ID == 0 && found_breakpoint != 0)
                     {
-                        if(strstr(str,surrender_prefix)!=NULL)
+                        if(strstr(str,surrender_suffix)!=NULL)
                         {
                             printf(text_red_start);
                             printf("%s",str);
                         }
                         else
                         {
+                            if(strstr(str,premisesid_prefix)!=NULL)
+                            {
+                                printf("\n");
+                            }
                             printf("%s",str);
                         }
                         
@@ -3713,8 +3752,8 @@ jump_admin_actions:
                                 strsanitize(ptr,0);
                                 
                                 
-                                //Removing surrender_prefix if found
-                                if(strstr(ptr,surrender_prefix)!=NULL)
+                                //Removing surrender_suffix if found
+                                if(strstr(ptr,surrender_suffix)!=NULL)
                                 {
                                     *(ptr+7) = '\0';
                                 }
@@ -3817,7 +3856,7 @@ jump_admin_actions:
                             else if(current_line == premisesID_location[i])
                             // Checks if lines match and if premises isnt already surrendered
                             {
-                                snprintf(strtemp,max_e_length,premisesid_prefix"%d: %s%s\n",i+1,user.premisesID[i],surrender_prefix);
+                                snprintf(strtemp,max_e_length,premisesid_prefix"%d: %s%s\n",i+1,user.premisesID[i],surrender_suffix);
                                 fputs(strtemp,temp_pointer);
                                 i++;
                             }
@@ -3852,7 +3891,8 @@ jump_admin_actions:
                         }
                         else
                         {
-                            printf(bold_start"\n\n-Customer Archived-\n"bold_end);
+                            printf(bold_start"\n\n- Customer Archived"bold_end);
+                            printf(bold_start"- (%d) Premises Surrendered -\n"bold_end,premisesamt);
                             audit_editcustomer(8,user.customerID);
                         }
                     }
@@ -4097,6 +4137,11 @@ jump_admin_actions:
                             //Printing premises data
                             for(int i = 0; i < premisesamt; i++)
                             {
+                                if(strstr(user.premisesID[i],surrender_suffix) != NULL)
+                                {
+                                    continue; // Skips printing premises if its surrendered
+                                }
+
                                 printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
                                 printf(metersize_prefix"%d: %d\n",i+1,user.meter_size[i]);
                                 printf(lastmeter_r_prefix"%d: %.2f\n\n",i+1, user.meter_reading[i]);
@@ -4107,7 +4152,7 @@ jump_admin_actions:
                             printf(underline_start"\nPick premises # to generate bill:\n"underline_end);
                             scanf(" %d" , &premises_pick);
 
-                            while(premises_pick>premisesamt || premises_pick<1 )
+                            while(premises_pick>premisesamt || premises_pick<1 || strstr(user.premisesID[premises_pick-1],surrender_suffix) != NULL)
                             {
                                 printf(bold_start"\n-User has no such premises-\n"bold_end);
                                 printf(underline_start"\nPick VALID premises # to generate bill:\n"underline_end);
@@ -4420,6 +4465,10 @@ jump_admin_actions:
                                         snprintf(str,max_e_length,early_pr_prefix"%.2f\n",early_payment_reduction);
                                         fputs(str,billfilepointer);
 
+                                        if((user.balance_overdue_amt*-1)>total_amount_due)
+                                        {
+                                            total_amount_due = 0;
+                                        }
                                         snprintf(str,max_e_length,balance_tbp_prefix"%.2f\n",total_amount_due);
                                         fputs(str,billfilepointer);
 
@@ -4438,9 +4487,9 @@ jump_admin_actions:
                                         }
 
                                         fputs(data_breakpoint,billfilepointer);
-                                        fputs("\n\n",billfilepointer);
+                                        fputs("\n",billfilepointer);
 
-                                        printf(bold_start"-User Bill Generated & Stored-"bold_end);
+                                        printf(bold_start"- User Bill Generated & Stored - Customer Can Make Payments"bold_end);
                                     }
                                     
                                     // if bill has been generated for this record before, then:
@@ -4820,7 +4869,7 @@ jump_admin_actions:
                                 {
                                     printf("%s%s",premises_spaces,user.premisesID[i]); // Printing premises ID
                                 }
-                                
+                                user.balance_overdue_amt = 0.0;
                                 printf("%s%.2f\n",premises_spaces,user.balance_overdue_amt); // Printing balance overdue
                                 //Printing line between each customer record
                                 clear_stringarray(str);
@@ -4906,18 +4955,18 @@ jump_admin_actions:
                             }
                             else if(found_ID == 0 && strstr(str,premisesid_prefix) != NULL)
                             {
-                                if(strstr(str,surrender_prefix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
+                                if(strstr(str,surrender_suffix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
                                 {
                                     snprintf(strtemp,max_length,premisesid_prefix"%d: ",premisesamt+1);
                                     remove_prefix(str,strtemp);
                                     strsanitize(str,0);
                                     strcpy(user.premisesID[premisesamt],str); // Saves line with premises ID prefix
-                                    premisesamt++; 
                                 }
                                 else
                                 {
                                     surrendered_premises_amt++;
                                 }
+                                premisesamt++; 
                             }
 
                         }
@@ -5149,18 +5198,18 @@ jump_admin_actions:
                             }
                             else if(found_ID == 0 && strstr(str,premisesid_prefix) != NULL)
                             {
-                                if(strstr(str,surrender_prefix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
+                                if(strstr(str,surrender_suffix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
                                 {
                                     snprintf(strtemp,max_length,premisesid_prefix"%d: ",premisesamt+1);
                                     remove_prefix(str,strtemp);
                                     strsanitize(str,0);
                                     strcpy(user.premisesID[premisesamt],str); // Saves line with premises ID prefix
-                                    premisesamt++; 
                                 }
                                 else
                                 {
                                     surrendered_premises_amt++;
                                 }
+                                premisesamt++; 
                             }
 
                         }
@@ -5419,18 +5468,12 @@ jump_admin_actions:
                             }
                             else if(found_ID == 0 && strstr(str,premisesid_prefix) != NULL)
                             {
-                                if(strstr(str,surrender_prefix)==NULL) // Only increment premises count if premises being looked at isnt surrendered
-                                {
-                                    snprintf(strtemp,max_length,premisesid_prefix"%d: ",premisesamt+1);
-                                    remove_prefix(str,strtemp);
-                                    strsanitize(str,0);
-                                    strcpy(user.premisesID[premisesamt],str); // Saves line with premises ID prefix
-                                    premisesamt++; 
-                                }
-                                else
-                                {
-                                    surrendered_premises_amt++;
-                                }
+                                snprintf(strtemp,max_length,premisesid_prefix"%d: ",premisesamt+1);
+                                remove_prefix(str,strtemp);
+                                strsanitize(str,0);
+                                str[strlen(str)-3] = '\0'; // Removes suffix from string
+                                strcpy(user.premisesID[premisesamt],str); // Saves line with premises ID prefix
+                                premisesamt++; 
                             }
 
                         }
@@ -5596,6 +5639,12 @@ jump_admin_actions:
 
     printf("When you're done enter (X):\n");
     scanf(" %c", &send_back_variable);
+
+    while(send_back_variable!= 'X' && send_back_variable != 'x')
+    {
+        printf("Invalid input, please enter (X):\n");
+        scanf(" %c", &send_back_variable);
+    }
 
     if(send_back_variable == 'X' || send_back_variable == 'x')
     {
@@ -5831,7 +5880,7 @@ jump_customer_actions:
                         ptr = NULL;
                         premisesamt++;
 
-                        if(strstr(str,surrender_prefix)!=NULL)
+                        if(strstr(str,surrender_suffix)!=NULL)
                         {
                             surrendered_premises_amt++;
                         }
@@ -5900,15 +5949,13 @@ jump_customer_actions:
 
     // Getting number of cards registered under user
     cardfilepointer = fopen(paymentcardfile,"r"); // attempts to open file in READ mode (r)
-
     registered_card_amt = 0;
     current_line = 1;
-
     if(cardfilepointer!=NULL)
     {
         while(fgets(str,max_e_length,cardfilepointer) != NULL)
         {
-            if(current_line>1)
+            if(current_line>1) // Skipping past title line
             {
                 if(strstr(str,id_of_current_account)!=NULL) //If id is found
                 {
@@ -6175,6 +6222,12 @@ jump_customer_actions:
                 printf("\nWhen you're done enter (X):\n");
                 scanf(" %c", &send_back_variable);
             
+                while(send_back_variable!= 'X' && send_back_variable != 'x')
+                {
+                    printf("Invalid input, please enter (X):\n");
+                    scanf(" %c", &send_back_variable);
+                }
+
                 if(send_back_variable == 'X' || send_back_variable == 'x')
                 {
                     goto jump_customer_actions;
@@ -6230,6 +6283,12 @@ jump_customer_actions:
                             printf("\nWhen you're done enter (X):\n");
                             scanf(" %c", &send_back_variable);
                         
+                            while(send_back_variable!= 'X' && send_back_variable != 'x')
+                            {
+                                printf("Invalid input, please enter (X):\n");
+                                scanf(" %c", &send_back_variable);
+                            }
+
                             if(send_back_variable == 'X' || send_back_variable == 'x')
                             {
                                 goto jump_customer_actions;
@@ -6369,7 +6428,7 @@ jump_customer_actions:
                     printf(bold_start"\nPREMISES OWNED %d\n"bold_end,premisesamt-surrendered_premises_amt);
                     for(i = 0; i < premisesamt; i++)
                     {
-                        if(strstr(user.premisesID[i],surrender_prefix)==NULL) // Premises being looked at is not surrendered, do:
+                        if(strstr(user.premisesID[i],surrender_suffix)==NULL) // Premises being looked at is not surrendered, do:
                         {
                             printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
                             printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
@@ -6395,7 +6454,7 @@ jump_customer_actions:
                     printf(underline_start"\nPick premises # to pay bill:\n"underline_end);
                     scanf(" %d" , &premises_pick);
 
-                    while(premises_pick > premisesamt || premises_pick <= 0 || strstr(user.premisesID[premises_pick-1],surrender_prefix)!=NULL)
+                    while(premises_pick > premisesamt || premises_pick <= 0 || strstr(user.premisesID[premises_pick-1],surrender_suffix)!=NULL)
                     {
                         printf(bold_start"\n-Customer owns no such premises-\n"bold_end);
                         printf(underline_start"\nPick premises # to view bill:\n"underline_end);
@@ -6636,7 +6695,7 @@ jump_customer_actions:
                                 
                                     fseek(customerdbpointer,0,SEEK_SET); //Resests pointer to start of file
                             
-                                    // Updating balance overdue to show account is fully paid
+                                    // Updating balance overdue & billing cycle to show account is fully paid
                                     if(temp_pointer != NULL && customerdbpointer != NULL) // If both files open successfully, do:
                                     {
                                         current_line = 1;
@@ -7096,7 +7155,7 @@ jump_customer_actions:
                 printf(bold_start"\nPREMISES OWNED %d\n"bold_end,premisesamt-surrendered_premises_amt);
                 for(i = 0; i < premisesamt; i++)
                 {
-                    if(strstr(user.premisesID[i],surrender_prefix)==NULL)
+                    if(strstr(user.premisesID[i],surrender_suffix)==NULL)
                     {
                         printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
                         printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
@@ -7122,7 +7181,7 @@ jump_customer_actions:
                 printf(underline_start"\nPick premises # to view bill:\n"underline_end);
                 scanf(" %d" , &premises_pick);
 
-                while(premises_pick > premisesamt || premises_pick <= 0 || strstr(user.premisesID[premises_pick-1],surrender_prefix)!=NULL)
+                while(premises_pick > premisesamt || premises_pick <= 0 || strstr(user.premisesID[premises_pick-1],surrender_suffix)!=NULL)
                 {
                     printf(bold_start"\n-Customer owns no such premises-\n"bold_end);
                     printf(underline_start"\nPick premises # to view bill:\n"underline_end);
@@ -7235,7 +7294,8 @@ jump_customer_actions:
                         k_factor = .20 * (water_charge + sewerage_charge + service_charge + PAM);
                         total_current_charges = (water_charge + sewerage_charge + service_charge) - (x_factor + k_factor);
                         total_amount_due = (total_current_charges  - (total_current_charges*early_payment_reduction)) + user.balance_overdue_amt;
-                        
+
+
                         if(1) // Printing bill empty if statement for organization
                         {
                             system(terminal_clear_string);
@@ -7309,7 +7369,13 @@ jump_customer_actions:
 
                             printf("\nWhen you're done enter (X):\n");
                             scanf(" %c", &send_back_variable);
-                        
+
+                            while(send_back_variable!= 'X' && send_back_variable != 'x')
+                            {
+                                printf("Invalid input, please enter (X):\n");
+                                scanf(" %c", &send_back_variable);
+                            }
+
                             if(send_back_variable == 'X' || send_back_variable == 'x')
                             {
                                 goto jump_customer_actions;
@@ -7342,7 +7408,7 @@ jump_customer_actions:
                 printf(bold_start"PREMISES OWNED %d\n"bold_end,premisesamt-surrendered_premises_amt);
                 for(i = 0; i < premisesamt; i++)
                 {
-                    if(strstr(user.premisesID[i],surrender_prefix)==NULL)
+                    if(strstr(user.premisesID[i],surrender_suffix)==NULL)
                     {
                         printf(premisesid_prefix"%d: %s\n",i+1, &user.premisesID[i][0]);
                         printf(metersize_prefix"%d: %d\n",i+1, user.meter_size[i]);
@@ -7369,7 +7435,7 @@ jump_customer_actions:
                 scanf(" %d" , &premises_pick);
 
                 // Input validation
-                while(premises_pick > premisesamt || premises_pick <= 0 || strstr(user.premisesID[premises_pick-1],surrender_prefix)!=NULL)
+                while(premises_pick > premisesamt || premises_pick <= 0 || strstr(user.premisesID[premises_pick-1],surrender_suffix)!=NULL)
                 {
                     printf(bold_start"\n-Customer owns no such premises-\n"bold_end);
                     printf(underline_start"\nPick premises # to view bill:\n"underline_end);
@@ -7480,6 +7546,12 @@ jump_customer_actions:
 
     printf("\nWhen you're done enter (X):\n");
     scanf(" %c", &send_back_variable);
+
+    while(send_back_variable!= 'X' && send_back_variable != 'x')
+    {
+        printf("Invalid input, please enter (X):\n");
+        scanf(" %c", &send_back_variable);
+    }
 
     if(send_back_variable == 'X' || send_back_variable == 'x')
     {
@@ -8200,7 +8272,7 @@ void audit_editcustomer(int audit_type, char * customerID)
                 fprintf(fp,"%s | Edit-made-to-customer-first-name-(by-admin) | ID-of-affected-user: ",log.date);
                 break;
             case 4: //Edit made to customer last name
-                fprintf(fp,"%s | Edit-made-to-customer-last-name-(by-admin)-| ID-of-affected-user: ",log.date);
+                fprintf(fp,"%s | Edit-made-to-customer-last-name-(by-admin) | ID-of-affected-user: ",log.date);
                 break;
             case 5: //Edit made to customer meter size
                 fprintf(fp,"%s | Edit-made-to-customer-meter-size-(by-admin) | ID-of-affected-user: ",log.date);
@@ -8370,8 +8442,11 @@ int get_premises_status(char* premisesID_for_lookup)
     FILE *fp;
     fp = fopen(customerdatabase,"r");
 
+    strcpy(strtemp,premisesID_for_lookup); // Copies premisesID to strtemp
+    strcat(strtemp,"\n"); // Adds surrender prefix to premisesID for lookup
     if(fp != NULL)
     {
+        fseek(fp,0,SEEK_SET); // Resets file pointer to beginning of file
         while(fgets(str,max_e_length,fp) != NULL)
         //While there's something to read in file,
         {
@@ -8382,18 +8457,18 @@ int get_premises_status(char* premisesID_for_lookup)
             }
             if(found_ID == 0)
             {
-                if(strstr(str,premisesid_prefix)!=NULL && strstr(str,surrender_prefix)== NULL) 
+                if(strstr(str,strtemp) != NULL && strstr(str,premisesid_prefix) != NULL)
                 // if id is found NOT surrendered then do:
                 {
                     premises_status = 0;
                     break;
                 }
-                else if(strstr(str,premisesid_prefix)!=NULL && strstr(str,surrender_prefix)!= NULL)
+                else if(strstr(str,premisesID_for_lookup) != NULL && strstr(str,surrender_suffix) != NULL)
                 // if id is found surrendered then do:
                 {
                     premises_status = 1;
                 }
-                
+
             }
         }
 
